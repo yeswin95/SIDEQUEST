@@ -18,6 +18,11 @@ public interface ProjectApplicationRepository extends JpaRepository<ProjectAppli
 
     long countByProjectRole_IdAndApplicationStatus(UUID projectRoleId, ApplicationStatus applicationStatus);
 
+    long countByProjectRole_Project_IdAndApplicationStatus(UUID projectId, ApplicationStatus applicationStatus);
+
+    @Query("SELECT COALESCE(SUM(pr.spotCount), 0) FROM ProjectRole pr WHERE pr.project.id = :projectId")
+    int sumSpotCountByProjectId(@Param("projectId") UUID projectId);
+
     @Query("""
             SELECT pa FROM ProjectApplication pa
             JOIN FETCH pa.projectRole pr

@@ -29,12 +29,16 @@ const defaultHandles: ConnectedHandle[] = [
 export default function ConnectedHandles({
   handles = defaultHandles,
   title = "Connected Handles",
+  className = "",
 }: {
   handles?: ConnectedHandle[];
   title?: string;
+  className?: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#282828] dark:bg-[#1c1c1c]">
+    <div
+      className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#282828] dark:bg-[#1c1c1c] ${className}`}
+    >
       <div className="mb-3 text-xs font-semibold text-slate-900 dark:text-[#ededed]">{title}</div>
       <div className="space-y-1 text-xs text-slate-600 dark:text-zinc-400">
         {handles.map((h) => {

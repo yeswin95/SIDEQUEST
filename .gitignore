@@ -25,6 +25,9 @@ frontend/build/
 
 # Logs
 *.log
+
+# Large archives
+/frontend2 (2).zip
 # Frontend
 frontend/node_modules/
 frontend/.next/

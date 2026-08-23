@@ -16,3 +16,8 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
+
+sidequest:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-key-please-never-use-in-production!}
+    expiration-ms: 86400000

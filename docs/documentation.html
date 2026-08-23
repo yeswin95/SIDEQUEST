@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIDEQUEST — Project Documentation</title>
+<style>
+  @page { margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: #1f2933;
+    font-size: 11pt;
+    line-height: 1.55;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  h1 { font-size: 26pt; color: #4338ca; margin-bottom: 4px; }
+  h2 {
+    font-size: 16pt; color: #4338ca;
+    border-bottom: 2px solid #c7d2fe;
+    padding-bottom: 4px; margin-top: 34px;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 13pt; color: #312e81; margin-top: 22px; page-break-after: avoid; }
+  h4 { font-size: 11.5pt; color: #3730a3; margin-top: 16px; page-break-after: avoid; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0 8px 4px; padding-left: 22px; }
+  li { margin: 3px 0; }
+  code, .mono {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    background: #eef2ff; padding: 1px 5px; border-radius: 4px;
+    font-size: 9.5pt; color: #3730a3;
+  }
+  pre {
+    background: #0f172a; color: #e2e8f0;
+    padding: 12px 14px; border-radius: 8px;
+    font-family: Menlo, Consolas, monospace; font-size: 9pt;
+    overflow-x: auto; line-height: 1.45;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 12px 0;
+    font-size: 9.5pt; page-break-inside: avoid;
+  }
+  th {
+    background: #4338ca; color: white; text-align: left;
+    padding: 7px 10px; font-weight: 600;
+  }
+  td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .cover {
+    text-align: center; padding: 90px 30px 40px;
+    page-break-after: always;
+  }
+  .cover .subtitle { font-size: 15pt; color: #64748b; margin-top: 8px; }
+  .cover .meta { margin-top: 60px; color: #94a3b8; font-size: 10.5pt; line-height: 1.8; }
+  .badge {
+    display: inline-block; background: #eef2ff; color: #4338ca;
+    border: 1px solid #c7d2fe; border-radius: 20px;
+    padding: 2px 12px; font-size: 9pt; margin: 2px;
+  }
+  .callout {
+    background: #fefce8; border-left: 4px solid #eab308;
+    padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 12px 0;
+    font-size: 10pt;
+  }
+  .info {
+    background: #eff6ff; border-left: 4px solid #3b82f6;
+    padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 12px 0;
+    font-size: 10pt;
+  }
+  .toc { page-break-after: always; }
+  .toc ol { columns: 2; -webkit-columns: 2; column-gap: 40px; }
+  .pagebreak { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- ================= COVER ================= -->
+<div class="cover">
+  <h1>⚔️ SIDEQUEST</h1>
+  <div class="subtitle">Student Project Collaboration Platform<br>Complete Technical Documentation</div>
+  <div class="meta">
+    Version 1.0 &nbsp;•&nbsp; August 2026<br><br>
+    <span class="badge">Spring Boot 3.3</span>
+    <span class="badge">Java 17</span>
+    <span class="badge">PostgreSQL</span><br>
+    <span class="badge">Next.js 14</span>
+    <span class="badge">React 18</span>
+    <span class="badge">TypeScript</span>
+    <span class="badge">Tailwind CSS</span>
+  </div>
+</div>
+
+<!-- ================= TOC ================= -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li>What is SIDEQUEST?</li>
+    <li>How It Works (User Journey)</li>
+    <li>System Architecture</li>
+    <li>Tech Stack</li>
+    <li>Database Design</li>
+    <li>Backend — Structure</li>
+    <li>Backend — Security &amp; Authentication</li>
+    <li>API Reference</li>
+    <li>Business Rules &amp; Application Lifecycle</li>
+    <li>Frontend — Pages &amp; Features</li>
+    <li>Configuration Guide</li>
+    <li>Running the Project Locally</li>
+    <li>Recent Security Improvements</li>
+    <li>Known Limitations &amp; Roadmap</li>
+  </ol>
+</div>
+
+<!-- ================= 1 ================= -->
+<h2>1. What is SIDEQUEST?</h2>
+<p>
+<strong>SIDEQUEST</strong> is a web platform where university students can find teammates and build projects together.
+It wraps this collaboration in a fun, game-like theme:
+</p>
+<ul>
+  <li><strong>Quests</strong> = projects that need teammates</li>
+  <li><strong>Guilds</strong> = communities/groups of students</li>
+  <li><strong>Skill Trees</strong> = hierarchical skill categories students can level up in</li>
+  <li><strong>Badges &amp; Achievements</strong> = visual rewards shown on profiles</li>
+  <li><strong>Player Cards</strong> = student profile cards styled like RPG character cards</li>
+</ul>
+<p>
+A student posts a project ("quest"), defines open team roles with the skills required for each role,
+and other students browse the quest feed and apply to the roles that match their skills.
+Project owners review applications and accept or reject them.
+</p>
+
+<!-- ================= 2 ================= -->
+<h2>2. How It Works (User Journey)</h2>
+<ol>
+  <li><strong>Sign up</strong> — a student registers with email, password, full name, major, and college year.</li>
+  <li><strong>Build profile</strong> — they add skills from the skill tree and pick a rank tier
+      (Bronze → Silver → Gold → Platinum → Diamond).</li>
+  <li><strong>Browse quests</strong> — the home feed shows open projects. Students can filter by skill,
+      search by keyword, or filter by project status.</li>
+  <li><strong>Create a quest</strong> — a student can post their own project, describing it and listing
+      open roles (e.g., "Frontend Developer × 2, needs React").</li>
+  <li><strong>Apply</strong> — another student applies to an open role. One application per role per person.</li>
+  <li><strong>Review</strong> — the project owner sees all applicants (with their skills and profiles)
+      and accepts or rejects each one.</li>
+  <li><strong>Team up</strong> — accepted applicants become team members. When every spot across all roles
+      is filled, the project automatically moves from OPEN to IN_PROGRESS.</li>
+</ol>
+
+<!-- ================= 3 ================= -->
+<div class="pagebreak"></div>
+<h2>3. System Architecture</h2>
+<pre><code>┌─────────────────────┐         HTTP + JSON          ┌──────────────────────────┐
+│   Frontend (Next.js) │ ◄────── JWT Bearer token ──► │  Backend (Spring Boot)   │
+│   localhost:3000     │                              │  localhost:8080          │
+│                     │      REST API /api/v1/*       │                          │
+│  • React pages      │                              │  • Controllers           │
+│  • Tailwind UI      │                              │  • Services              │
+│  • api.ts client    │                              │  • Repositories (JPA)    │
+│  • JWT in localStorage                             │  • Spring Security + JWT │
+└─────────────────────┘                              └────────────┬─────────────┘
+                                                                  │ JPA / Hibernate
+                                                     ┌────────────▼─────────────┐
+                                                     │   PostgreSQL Database    │
+                                                     │   schema.sql (normalized)│
+                                                     └──────────────────────────┘</code></pre>
+
+<h3>Key architectural decisions</h3>
+<table>
+  <tr><th>Decision</th><th>Why</th></tr>
+  <tr><td>Stateless JWT authentication</td><td>No server-side sessions; scales horizontally; simple for SPA clients</td></tr>
+  <tr><td>Layered backend (Controller → Service → Repository)</td><td>Clear separation of concerns; business logic lives only in services</td></tr>
+  <tr><td>DTOs for all requests/responses</td><td>Database entities are never exposed directly to API clients</td></tr>
+  <tr><td>Normalized relational schema</td><td>Data integrity enforced at the database level with constraints and foreign keys</td></tr>
+  <tr><td><code>open-in-view: false</code></td><td>Forces explicit data fetching; avoids hidden lazy-loading bugs</td></tr>
+</table>
+
+<!-- ================= 4 ================= -->
+<h2>4. Tech Stack</h2>
+
+<h3>Backend</h3>
+<table>
+  <tr><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>Java 17 + Spring Boot 3.3.5</td><td>Application framework and runtime</td></tr>
+  <tr><td>Spring Web</td><td>REST API endpoints</td></tr>
+  <tr><td>Spring Data JPA + Hibernate 6.5</td><td>Database access and object-relational mapping</td></tr>
+  <tr><td>Spring Security</td><td>Authentication and authorization</td></tr>
+  <tr><td>JJWT 0.12.6</td><td>Creating and validating JSON Web Tokens</td></tr>
+  <tr><td>Bean Validation (Jakarta)</td><td>Request input validation</td></tr>
+  <tr><td>Lombok</td><td>Removes boilerplate code (getters, builders, constructors)</td></tr>
+  <tr><td>PostgreSQL (prod) / H2 (dev &amp; tests)</td><td>Databases</td></tr>
+  <tr><td>Maven</td><td>Build tool and dependency manager</td></tr>
+</table>
+
+<h3>Frontend</h3>
+<table>
+  <tr><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>Next.js 14 (App Router)</td><td>React framework with file-based routing</td></tr>
+  <tr><td>React 18</td><td>User interface library</td></tr>
+  <tr><td>TypeScript 5.5</td><td>Type safety</td></tr>
+  <tr><td>Tailwind CSS 3.4</td><td>Utility-first styling</td></tr>
+  <tr><td>Lucide React</td><td>Icon library</td></tr>
+</table>
+
+<h3>Database</h3>
+<table>
+  <tr><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>PostgreSQL</td><td>Main production database</td></tr>
+  <tr><td>CITEXT extension</td><td>Case-insensitive email storage</td></tr>
+  <tr><td>pgcrypto extension</td><td>Random UUID generation (<code>gen_random_uuid()</code>)</td></tr>
+</table>
+
+<!-- ================= 5 ================= -->
+<div class="pagebreak"></div>
+<h2>5. Database Design</h2>
+<p>The schema lives in <code>database/schema.sql</code>. All tables use UUID primary keys and have automatic
+<code>created_at</code> / <code>updated_at</code> timestamps (updated via a database trigger).</p>
+
+<h3>Entity Relationship Overview</h3>
+<pre><code>users ──1:1── user_profiles
+  │
+  ├──1:N── user_skills ──N:1── skills (self-referencing tree via parent_skill_id)
+  │
+  ├──1:N── projects ──1:N── project_roles ──M:N── skills
+  │                            │            (via project_role_required_skills)
+  │                            └──1:N── project_applications ──N:1── users (applicant)</code></pre>
+
+<h3>Tables</h3>
+
+<h4><code>users</code> — login identity</h4>
+<table>
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td>id</td><td>UUID (PK)</td><td>Auto-generated</td></tr>
+  <tr><td>email</td><td>CITEXT (unique)</td><td>Case-insensitive</td></tr>
+  <tr><td>password_hash</td><td>TEXT</td><td>BCrypt hash — plain passwords are never stored</td></tr>
+</table>
+
+<h4><code>user_profiles</code> — extended student info (one-to-one with users)</h4>
+<table>
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td>user_id</td><td>UUID (PK, FK → users)</td><td>Cascade delete</td></tr>
+  <tr><td>full_name</td><td>TEXT</td><td>Cannot be empty</td></tr>
+  <tr><td>college_year</td><td>SMALLINT</td><td>Must be between 1 and 8</td></tr>
+  <tr><td>major</td><td>TEXT</td><td>Cannot be empty</td></tr>
+  <tr><td>active_status</td><td>enum</td><td>ACTIVE / INACTIVE / SUSPENDED (default ACTIVE)</td></tr>
+</table>
+
+<h4><code>skills</code> — hierarchical skill taxonomy</h4>
+<table>
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td>id</td><td>UUID (PK)</td><td></td></tr>
+  <tr><td>skill_name</td><td>TEXT</td><td>Unique within its category</td></tr>
+  <tr><td>category</td><td>TEXT</td><td>e.g., "Programming Languages"</td></tr>
+  <tr><td>parent_skill_id</td><td>UUID (FK → skills)</td><td>Creates the tree structure; cannot be its own parent</td></tr>
+</table>
+
+<h4><code>user_skills</code> — a user's proficiency in one skill</h4>
+<table>
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td>user_id + skill_id</td><td>unique pair</td><td>A user can claim each skill only once</td></tr>
+  <tr><td>rank_tier</td><td>enum</td><td>BRONZE / SILVER / GOLD / PLATINUM / DIAMOND</td></tr>
+  <tr><td>verification_status</td><td>enum</td><td>UNVERIFIED / PENDING / VERIFIED / REJECTED</td></tr>
+</table>
+
+<h4><code>projects</code> — collaboration postings</h4>
+<table>
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td>owner_id</td><td>UUID (FK → users)</td><td>The creator; cannot be deleted while projects exist</td></tr>
+  <tr><td>title, description</td><td>TEXT</td><td>Required</td></tr>
+  <tr><td>repo_link</td><td>TEXT (optional)</td><td>Link to a Git repository</td></tr>
+  <tr><td>status</td><td>enum</td><td>DRAFT / OPEN / IN_PROGRESS / COMPLETED / ARCHIVED / CANCELLED</td></tr>
+</table>
+
+<h4><code>project_roles</code> — open positions in a project</h4>
+<table>
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td>project_id</td><td>UUID (FK → projects)</td><td>Cascade delete</td></tr>
+  <tr><td>role_title</td><td>TEXT</td><td>e.g., "Backend Developer"</td></tr>
+  <tr><td>spot_count</td><td>SMALLINT</td><td>Must be greater than 0</td></tr>
+</table>
+
+<h4><code>project_role_required_skills</code> — M:N join table</h4>
+<p>Links each role to the skills applicants should have.</p>
+
+<h4><code>project_applications</code> — role applications</h4>
+<table>
+  <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+  <tr><td>project_role_id + applicant_id</td><td>unique pair</td><td>One application per role per student</td></tr>
+  <tr><td>application_status</td><td>enum</td><td>PENDING / ACCEPTED / REJECTED (default PENDING)</td></tr>
+  <tr><td>applied_at</td><td>TIMESTAMPTZ</td><td>Indexed for sorting</td></tr>
+</table>
+
+<!-- ================= 6 ================= -->
+<div class="pagebreak"></div>
+<h2>6. Backend — Structure</h2>
+<pre><code>backend/src/main/java/com/sidequest/
+├── SidequestApplication.java        # Entry point (@SpringBootApplication)
+├── config/
+│   ├── SecurityConfig.java          # Filter chain, CORS, password encoder
+│   └── JwtProperties.java          # JWT settings (secret, expiry) with validation
+├── controller/                      # REST endpoints (thin — no business logic)
+│   ├── AuthController.java         # /api/v1/auth/**
+│   ├── ProfileController.java      # /api/v1/profiles/**
+│   ├── SkillController.java        # /api/v1/skills/**
+│   ├── ProjectController.java      # /api/v1/projects**
+│   ├── ProjectApplicationController.java
+│   └── HomeController.java
+├── service/                         # All business logic lives here
+│   ├── AuthService.java            # Register + login
+│   ├── ProfileService.java
+│   ├── SkillService.java           # Skill tree, user skill upsert
+│   ├── ProjectService.java         # Create/search projects
+│   └── ProjectApplicationService.java  # Apply, accept/reject, withdraw
+├── repository/                      # Spring Data JPA interfaces
+├── entity/                          # JPA database entities
+├── dto/
+│   ├── request/                     # Incoming payloads (validated)
+│   └── response/                    # Outgoing payloads
+├── enums/                           # Java enums mirroring DB enum types
+├── exception/                       # Global error handling
+└── security/                        # JWT filter, token provider, current-user helper</pre></code>
+
+<h3>Error handling</h3>
+<ul>
+  <li><code>ResourceNotFoundException</code> → HTTP 404 when something doesn't exist</li>
+  <li><code>UnauthorizedAccessException</code> → HTTP 403 when access isn't allowed</li>
+  <li><code>IllegalArgumentException</code> → HTTP 400 for bad business-rule requests</li>
+  <li>All errors are converted to consistent JSON responses by <code>GlobalExceptionHandler</code></li>
+</ul>
+
+<!-- ================= 7 ================= -->
+<h2>7. Backend — Security &amp; Authentication</h2>
+
+<h3>Registration &amp; Login Flow</h3>
+<ol>
+  <li>User submits email + password (register also includes name, major, year).</li>
+  <li>Passwords are hashed with <strong>BCrypt</strong> before storage — never saved as plain text.</li>
+  <li>Emails are normalized to lowercase; duplicates are rejected.</li>
+  <li>On successful login, Spring's <code>AuthenticationManager</code> verifies credentials.</li>
+  <li>The server issues a signed <strong>JWT token</strong> valid for 24 hours containing the user's ID and email.</li>
+</ol>
+
+<h3>How protected endpoints work</h3>
+<ol>
+  <li>Every request passes through <code>JwtAuthenticationFilter</code>.</li>
+  <li>The filter reads the <code>Authorization: Bearer &lt;token&gt;</code> header.</li>
+  <li>The token signature is verified against the server's secret key.</li>
+  <li>If valid, the user is authenticated for that request; otherwise the endpoint returns 401/403.</li>
+  <li><code>CurrentUserService</code> gives services easy access to "who is logged in".</li>
+</ol>
+
+<h3>What is public vs. protected</h3>
+<table>
+  <tr><th>Access</th><th>Endpoints</th></tr>
+  <tr><td>Public (no token)</td><td>Register, login, GET projects, GET skills</td></tr>
+  <tr><td>Authenticated (token required)</td><td>Profile read/update, create project, apply, manage applications, add skills</td></tr>
+  <tr><td>Dev-only</td><td>H2 console (only active with the <code>dev</code> profile)</td></tr>
+</table>
+
+<div class="info"><strong>CORS:</strong> the API only accepts browser requests from whitelisted origins
+(default: <code>http://localhost:3000</code>). Change it with the <code>CORS_ALLOWED_ORIGINS</code> environment variable.</div>
+
+<!-- ================= 8 ================= -->
+<div class="pagebreak"></div>
+<h2>8. API Reference</h2>
+<p>Base URL: <code>http://localhost:8080/api/v1</code> — all bodies are JSON.</p>
+
+<h3>Authentication</h3>
+<table>
+  <tr><th>Method &amp; Path</th><th>Auth</th><th>Description</th></tr>
+  <tr>
+    <td><code>POST /auth/register</code></td><td>Public</td>
+    <td>Create account. Body: <code>{ email, password, fullName, major, collegeYear }</code>. Returns token + user info (HTTP 201).</td>
+  </tr>
+  <tr>
+    <td><code>POST /auth/login</code></td><td>Public</td>
+    <td>Body: <code>{ email, password }</code>. Returns token + user info.</td>
+  </tr>
+</table>
+
+<h3>Profiles</h3>
+<table>
+  <tr><th>Method &amp; Path</th><th>Auth</th><th>Description</th></tr>
+  <tr><td><code>GET /profiles/me</code></td><td>Token</td><td>Get my profile including my skills</td></tr>
+  <tr><td><code>PUT /profiles/me</code></td><td>Token</td><td>Update my name, major, college year</td></tr>
+</table>
+
+<h3>Skills</h3>
+<table>
+  <tr><th>Method &amp; Path</th><th>Auth</th><th>Description</th></tr>
+  <tr><td><code>GET /skills</code></td><td>Public</td><td>Get the full skill tree (parents with children)</td></tr>
+  <tr><td><code>POST /skills/me</code></td><td>Token</td><td>Add/update one of my skills. Body: <code>{ skillId, rankTier }</code></td></tr>
+</table>
+
+<h3>Projects</h3>
+<table>
+  <tr><th>Method &amp; Path</th><th>Auth</th><th>Description</th></tr>
+  <tr><td><code>POST /projects</code></td><td>Token</td><td>Create a project with roles and required skills</td></tr>
+  <tr><td><code>GET /projects</code></td><td>Public</td><td>List projects. Optional filters: <code>?skill=</code>, <code>?search=</code>, <code>?status=</code></td></tr>
+  <tr><td><code>GET /projects/{id}</code></td><td>Public</td><td>Get one project with roles, team members, and spot counts</td></tr>
+</table>
+
+<h3>Applications</h3>
+<table>
+  <tr><th>Method &amp; Path</th><th>Auth</th><th>Description</th></tr>
+  <tr><td><code>POST /projects/{projectId}/roles/{roleId}/apply</code></td><td>Token</td><td>Apply to a specific role</td></tr>
+  <tr><td><code>PUT /applications/{id}/status</code></td><td>Token</td><td>Owner accepts/rejects; applicant may withdraw (reject own pending app)</td></tr>
+  <tr><td><code>GET /projects/{projectId}/applications</code></td><td>Token</td><td>Owner views all applicants for their project</td></tr>
+  <tr><td><code>GET /applications/me</code></td><td>Token</td><td>View my own sent applications</td></tr>
+</table>
+
+<h3>Example: register and call a protected endpoint</h3>
+<pre><code># 1. Register
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alex@uni.edu","password":"secret123",
+       "fullName":"Alex Rivera","major":"Computer Science","collegeYear":2}'
+
+# Response: {"accessToken":"eyJhbG...","tokenType":"Bearer", ...}
+
+# 2. Call a protected endpoint
+curl http://localhost:8080/api/v1/profiles/me \
+  -H "Authorization: Bearer eyJhbG..."</code></pre>
+
+<!-- ================= 9 ================= -->
+<div class="pagebreak"></div>
+<h2>9. Business Rules &amp; Application Lifecycle</h2>
+
+<h3>Rules enforced when applying to a role</h3>
+<ul>
+  <li>The project must be in <strong>OPEN</strong> status</li>
+  <li>You <strong>cannot apply to your own project</strong></li>
+  <li>You can apply to each role <strong>only once</strong></li>
+  <li>The role must have <strong>spots remaining</strong></li>
+</ul>
+
+<h3>Application state machine</h3>
+<pre><code>            owner accepts            owner rejects
+ PENDING ───────────────► ACCEPTED ─────────────► REJECTED
+    │                                                 ▲
+    └──────────── applicant withdraws ─────────────────┘</code></pre>
+
+<h3>Concurrency safety</h3>
+<p>
+When someone applies or an owner decides on an application, the system places a
+<strong>pessimistic database lock</strong> on the role row before counting accepted members.
+This means two people applying at the exact same moment can never over-fill a role —
+one waits briefly for the other to finish.
+</p>
+
+<h3>Automatic project status changes</h3>
+<table>
+  <tr><th>Event</th><th>Effect on project status</th></tr>
+  <tr><td>Last available spot is accepted</td><td>OPEN → IN_PROGRESS (only when ALL roles are fully staffed)</td></tr>
+  <tr><td>An accepted member is rejected/withdrawn later</td><td>IN_PROGRESS → OPEN (others can apply again)</td></tr>
+</table>
+
+<h3>Data integrity guarantees</h3>
+<ul>
+  <li>Passwords stored only as BCrypt hashes</li>
+  <li>Emails are unique and case-insensitive</li>
+  <li>Deleting a user removes their profile, skills, and applications (cascade)</li>
+  <li>A project owner cannot be deleted while their projects exist (restrict)</li>
+  <li>Skills referenced by roles or users cannot be accidentally deleted (restrict)</li>
+</ul>
+
+<!-- ================= 10 ================= -->
+<div class="pagebreak"></div>
+<h2>10. Frontend — Pages &amp; Features</h2>
+<pre><code>frontend/src/
+├── app/                    # Pages (Next.js App Router)
+│   ├── page.tsx            # Home — quest feed with search &amp; filters
+│   ├── quests/page.tsx     # Browse all quests
+│   ├── my-quests/page.tsx  # My posted projects + received applications
+│   ├── saved-quests/page.tsx  # Bookmarked quests (localStorage)
+│   ├── skills/page.tsx     # Interactive skill tree
+│   ├── profile/page.tsx    # My profile, badges, achievements
+│   ├── guilds/[slug]/      # Guild (community) detail pages
+│   └── communities/[slug]/ # Community detail pages
+├── components/             # Reusable UI pieces (~35 components)
+└── lib/
+    ├── api.ts              # Typed REST client for the backend
+    ├── savedQuests.ts      # Local bookmark persistence
+    ├── theme-provider.tsx  # Dark/light mode
+    └── tierConfig.ts       # Rank-tier colors/config</code></pre>
+
+<h3>Notable features</h3>
+<ul>
+  <li><strong>Quest cards</strong> — show title, owner, required skills, open party roles, dates</li>
+  <li><strong>Create Quest modal</strong> — post a new project with multiple roles</li>
+  <li><strong>Apply modal</strong> — one-click application to a role</li>
+  <li><strong>Skill node tree</strong> — visual tree explorer; unlock/level skills</li>
+  <li><strong>Badge system</strong> — achievement grid, badge details, badge stats</li>
+  <li><strong>Player profile card</strong> — metal/RPG-styled card with tier customization</li>
+  <li><strong>Dark/light theme toggle</strong> — persisted preference</li>
+  <li><strong>JWT session</strong> — token kept in localStorage, auto-attached to API calls</li>
+</ul>
+
+<div class="callout"><strong>Note:</strong> some sections of the home feed still use demo ("mock") quest data
+to make the prototype look alive. Real projects created through the API appear alongside them.</div>
+
+<!-- ================= 11 ================= -->
+<h2>11. Configuration Guide</h2>
+
+<h3>Environment variables (backend)</h3>
+<table>
+  <tr><th>Variable</th><th>Required</th><th>Default</th><th>Purpose</th></tr>
+  <tr><td><code>SPRING_PROFILES_ACTIVE</code></td><td>No</td><td><code>dev</code></td><td><code>dev</code> uses in-memory H2; any other value expects PostgreSQL</td></tr>
+  <tr><td><code>DB_USERNAME</code> / <code>DB_PASSWORD</code></td><td>In prod</td><td><code>postgres</code></td><td>PostgreSQL credentials</td></tr>
+  <tr><td><code>JWT_SECRET</code></td><td><strong>Yes</strong></td><td>—</td><td>Signing key, min 32 characters. App refuses to start without it.</td></tr>
+  <tr><td><code>CORS_ALLOWED_ORIGINS</code></td><td>No</td><td><code>http://localhost:3000</code></td><td>Browser origins allowed to call the API</td></tr>
+</table>
+
+<h3>Profiles</h3>
+<table>
+  <tr><th>Profile</th><th>Database</th><th>Schema handling</th><th>Use</th></tr>
+  <tr><td><code>dev</code> (default)</td><td>In-memory H2 (PostgreSQL mode)</td><td>Recreated on each restart</td><td>Local development</td></tr>
+  <tr><td>other (e.g., <code>prod</code>)</td><td>PostgreSQL at localhost:5432/sidequest</td><td><code>validate</code> — must match schema.sql</td><td>Deployment</td></tr>
+</table>
+
+<div class="info"><strong>Important:</strong> without <code>JWT_SECRET</code> set, production startup fails immediately with a clear error message — this is intentional protection against silently running with a weak key.</div>
+
+<!-- ================= 12 ================= -->
+<div class="pagebreak"></div>
+<h2>12. Running the Project Locally</h2>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li>Java 17+, Node.js 18+, Maven (or use the included wrapper)</li>
+  <li>PostgreSQL only if you want persistent data (dev mode needs nothing)</li>
+</ul>
+
+<h3>Step 1 — Start the backend (dev mode)</h3>
+<pre><code>cd backend
+./mvnw spring-boot:run
+# Runs on http://localhost:8080 with in-memory H2 database
+# H2 console: http://localhost:8080/h2-console</code></pre>
+
+<h3>Step 2 — Run the database schema (optional, for PostgreSQL)</h3>
+<pre><code>createdb sidequest
+psql -d sidequest -f ../database/schema.sql</code></pre>
+
+<h3>Step 3 — Start the frontend</h3>
+<pre><code>cd frontend
+npm install
+npm run dev
+# Opens on http://localhost:3000</code></pre>
+
+<h3>Step 4 — Run the backend tests</h3>
+<pre><code>cd backend
+./mvnw test</code></pre>
+
+<!-- ================= 13 ================= -->
+<h2>13. Recent Security Improvements</h2>
+<p>The following hardening changes were applied during review (August 2026):</p>
+<ol>
+  <li><strong>CORS locked down</strong> — was open to all origins with credentials; now restricted to whitelisted origins (default localhost:3000 only).</li>
+  <li><strong>JWT secret fail-fast</strong> — the app validates at startup that the secret exists and is ≥ 32 bytes; no more silent insecure default in production.</li>
+  <li><strong>H2 console isolated</strong> — only reachable under the dev profile.</li>
+  <li><strong>Race condition fixed</strong> — pessimistic row locks prevent over-filling roles under concurrent applications/decisions.</li>
+  <li><strong>Smarter project status</strong> — projects go IN_PROGRESS only when fully staffed, and reopen when a member leaves.</li>
+  <li><strong>Ownership check hardened</strong> — viewing applicants now verifies ownership explicitly, even with zero applications.</li>
+  <li><strong>Schema drift prevented</strong> — production uses <code>ddl-auto: validate</code> instead of auto-updating the schema.</li>
+  <li><strong>Typed API layer</strong> — all frontend API responses have TypeScript interfaces instead of <code>any</code>.</li>
+</ol>
+
+<!-- ================= 14 ================= -->
+<h2>14. Known Limitations &amp; Roadmap</h2>
+
+<h3>Current limitations</h3>
+<ul>
+  <li>No pagination yet — very large lists of projects/applications would slow down</li>
+  <li>JWT tokens live 24 hours with no refresh-token flow or logout revocation</li>
+  <li>Skill verification statuses exist in the data model but no verification process runs yet</li>
+  <li>No notifications — applicants aren't told when they're accepted/rejected</li>
+  <li>Token is stored in localStorage, which is readable by scripts if XSS ever occurred</li>
+  <li>Some home-feed content is mock/demo data mixed with real data</li>
+</ul>
+
+<h3>Suggested next steps (in priority order)</h3>
+<ol>
+  <li><strong>Flyway migrations</strong> — version-controlled schema changes instead of manual SQL</li>
+  <li><strong>Refresh tokens + logout</strong> — short-lived access tokens, revocable sessions</li>
+  <li><strong>Pagination</strong> — for project listings and application lists</li>
+  <li><strong>Skill verification</strong> — peer endorsement or GitHub-based proof of skills</li>
+  <li><strong>Notifications</strong> — email or in-app alerts on application decisions</li>
+  <li><strong>More tests</strong> — cover the application state machine and permission rules</li>
+</ol>
+
+<p style="margin-top:50px; color:#94a3b8; font-size:9.5pt; text-align:center;">
+SIDEQUEST Documentation — generated August 2026
+</p>
+
+</body>
+</html>
