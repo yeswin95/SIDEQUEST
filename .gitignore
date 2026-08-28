@@ -13,9 +13,12 @@ backend/.mvn/wrapper/maven-wrapper.jar
 # Secrets
 .env
 .env.*
+!.env.example
+.env.local
 *.pem
 *.key
 credentials.json
+render.env
 
 # Frontend
 frontend/node_modules/
