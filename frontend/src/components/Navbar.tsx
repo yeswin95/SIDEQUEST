@@ -81,19 +81,23 @@ export default function Navbar({
           </Link>
         </div>
 
-        {/* Center: Search Bar */}
-        <div className="flex-1 max-w-lg hidden sm:block">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-2.5 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-              placeholder="Search quests, skills, hackathon teams, or leaders..."
-              className="w-full rounded-full border border-slate-200 bg-slate-50/80 pl-9 pr-4 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:border-[#3ecf8e] focus:bg-white focus:outline-none dark:border-[#282828] dark:bg-[#1c1c1c] dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:bg-[#202020] transition-colors"
-            />
+        {/* Center: Search Bar — only interactive on home feed; hidden elsewhere to avoid dead input */}
+        {onSearchChange ? (
+          <div className="flex-1 max-w-lg hidden sm:block">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-2.5 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Search quests, skills, hackathon teams, or leaders..."
+                className="w-full rounded-full border border-slate-200 bg-slate-50/80 pl-9 pr-4 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:border-[#3ecf8e] focus:bg-white focus:outline-none dark:border-[#282828] dark:bg-[#1c1c1c] dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:bg-[#202020] transition-colors"
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex-1 max-w-lg hidden sm:block" aria-hidden />
+        )}
 
         {/* Right: Post Quest CTA + Profile Shortcut + Theme Toggle */}
         <div className="flex items-center gap-2.5 shrink-0">

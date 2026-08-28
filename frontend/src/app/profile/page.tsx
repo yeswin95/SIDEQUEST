@@ -180,6 +180,21 @@ export default function ProfilePage() {
     };
   }, [profile.skills]);
 
+  // Scroll to anchored sections when navigating via hash (e.g., from Sidebar > Verified Badges or ProfileMenu > Account Details)
+  useEffect(() => {
+    const scrollToHash = () => {
+      const hash = window.location.hash;
+      if (hash === "#badges" || hash === "#account-details") {
+        setTimeout(() => {
+          document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 150);
+      }
+    };
+    scrollToHash();
+    window.addEventListener("hashchange", scrollToHash);
+    return () => window.removeEventListener("hashchange", scrollToHash);
+  }, []);
+
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
   };
@@ -573,7 +588,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Achievements & Campus Badges */}
-            <div className="mt-10">
+            <div id="badges" className="mt-10 scroll-mt-20">
               <h2 className="text-lg font-bold text-slate-900 dark:text-[#ededed] mb-6">
                 Achievements & Campus Badges
               </h2>
@@ -631,7 +646,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Remaining Profile Sections */}
-            <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <div id="account-details" className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch scroll-mt-20">
               <div className="flex flex-col justify-between h-full">
                 {/* Connected Handles */}
                 <ConnectedHandles className="w-full" />

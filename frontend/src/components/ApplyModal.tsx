@@ -105,15 +105,14 @@ export default function ApplyModal({
       }, 1000);
     } catch (err: any) {
       setLoading(false);
-      console.warn("API apply fallback:", err);
-      setStatusMsg({
-        type: "success",
-        text: `Party application submitted for ${selectedRole.roleTitle}!`,
-      });
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 1000);
+      const msg = String(err?.message || "");
+      if (msg.includes("401") || msg.toLowerCase().includes("unauthorized")) {
+        setStatusMsg({ type: "error", text: "Please sign in to apply for a quest role." });
+      } else if (msg.includes("409") || msg.toLowerCase().includes("already")) {
+        setStatusMsg({ type: "error", text: "You have already applied for this quest." });
+      } else {
+        setStatusMsg({ type: "error", text: msg || "Failed to submit application. Please try again." });
+      }
     }
   };
 

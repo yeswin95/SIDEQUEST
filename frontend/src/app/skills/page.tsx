@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import SkillNodeTree, { SkillTreeNode } from "@/components/SkillNodeTree";
@@ -11,7 +12,8 @@ import { mockSkills, Skill } from "@/lib/skillsData";
 import { loadCompletedSkillIds, loadGoals, saveCompletedSkillIds, saveGoals, UserGoal } from "@/lib/skillState";
 import { Layers, List, Network } from "lucide-react";
 
-export default function SkillsPage() {
+function SkillsPageContent() {
+  const searchParams = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [skillQuery, setSkillQuery] = useState("");
@@ -44,14 +46,24 @@ export default function SkillsPage() {
   const displayedSkills = Object.values(skillsByCategory).flat();
   const toggleCategory = (category: string) => setSelectedCategories((current) => current.includes(category) ? current.filter((item) => item !== category) : [...current, category]);
 
+  // Reactive handling of ?view=tree|list from sidebar deep-links.
+  // useSearchParams subscribes to URL changes even when staying on same route.
   useEffect(() => {
-    const storedView = window.localStorage.getItem("sidequest_skills_view");
-    if (storedView === "tree" || storedView === "list") setActiveView(storedView);
-  }, []);
+    const viewParam = searchParams.get("view");
+    if (viewParam === "tree" || viewParam === "list") {
+      setActiveView(viewParam);
+      try { window.localStorage.setItem("sidequest_skills_view", viewParam); } catch {}
+      return;
+    }
+    try {
+      const storedView = window.localStorage.getItem("sidequest_skills_view");
+      if (storedView === "tree" || storedView === "list") setActiveView(storedView);
+    } catch {}
+  }, [searchParams]);
 
   const selectView = (view: "list" | "tree") => {
     setActiveView(view);
-    window.localStorage.setItem("sidequest_skills_view", view);
+    try { window.localStorage.setItem("sidequest_skills_view", view); } catch {}
   };
   const toggleDone = (skill: Skill) => {
     if (!completed.has(skill.id) && !isUnlocked(skill)) return;
@@ -112,7 +124,7 @@ export default function SkillsPage() {
                         <button type="button" onClick={() => setSelectedSkillId(skill.id)} className="flex w-full min-w-0 items-start gap-2 text-left">
                           <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${completed.has(skill.id) ? "bg-[#3ecf8e] shadow-[0_0_9px_rgba(62,207,142,0.7)]" : !isUnlocked(skill) ? "bg-slate-300 dark:bg-zinc-600" : "bg-amber-400"}`} />
                           <span className="min-w-0 flex-1 break-words text-xs font-medium text-slate-700 hover:text-[#21875c] dark:text-zinc-300 dark:hover:text-[#3ecf8e]">{skill.name}</span>
-                          <span className={`shrink-0 text-[10px] ${completed.has(skill.id) ? "text-[#21875c] dark:text-[#3ecf8e]" : "text-slate-400 dark:text-zinc-500"}`}>{completed.has(skill.id) ? "Completed" : "Incomplete"}</span>
+                          <span className={`shrink-0 text-[10px] ${completed.has(skill.id) ? "text-[#21875c] dark:text-[#3ecf8e]" : "text-slate-400 dark:text-zinc-500"}`}>{completed.has(skill.id) ? "Completed" : !isUnlocked(skill) ? "Locked" : "Available"}</span>
                         </button>
                         </div>
                       ))}
@@ -125,7 +137,7 @@ export default function SkillsPage() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <NextGoals goals={goals.map((goal) => goal.skillId && completed.has(goal.skillId) ? { ...goal, completed: true } : goal)} onAddCustom={(title) => updateGoals([...goals, { id: `custom-${Date.now()}`, title, completed: false }])} onToggle={toggleGoal} onRemove={(id) => updateGoals(goals.filter((goal) => goal.id !== id))} />
-              <SkillsToUnlock skills={displayedSkills} onSelect={setSelectedSkillId} />
+              <SkillsToUnlock skills={displayedSkills} completedIds={completed} onSelect={setSelectedSkillId} />
             </div>
             </div> : <div key="tree" className="animate-[skills-view-fade_180ms_ease-out]"><SkillNodeTree nodes={treeNodes} onNodeClick={setSelectedSkillId} selectedId={selectedSkillId ?? undefined} /></div>}
           </main>
@@ -134,5 +146,13 @@ export default function SkillsPage() {
 
       <SkillDetailsModal skill={selectedSkill} allSkills={resolvedSkills} completed={selectedSkill ? completed.has(selectedSkill.id) : false} locked={selectedSkill ? !completed.has(selectedSkill.id) && !isUnlocked(selectedSkill) : false} inGoals={selectedSkill ? goals.some((goal) => goal.skillId === selectedSkill.id) : false} onToggleCompleted={() => { if (selectedSkill) toggleDone(selectedSkill); }} onAddGoal={() => { if (selectedSkill) addSkillGoal(selectedSkill); }} onClose={() => setSelectedSkillId(null)} />
     </div>
+  );
+}
+
+export default function SkillsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f8fafc] dark:bg-[#121212] flex items-center justify-center"><div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-[#3ecf8e]" /></div>}>
+      <SkillsPageContent />
+    </Suspense>
   );
 }

@@ -142,9 +142,10 @@ export default function Sidebar({
             {skillsExpanded && (
               <div className="mt-1.5 space-y-0.5">
                 {/* Highlight Featured Card */}
-                <div
+                <Link
+                  href="/?tag=Open%20Roles"
                   onClick={() => { onSelectTag?.("Open Roles"); onClose?.(); }}
-                  className="cursor-pointer mb-2 rounded-lg border border-[#3ecf8e]/30 bg-[#3ecf8e]/5 p-2.5 transition-all hover:border-[#3ecf8e] hover:bg-[#3ecf8e]/10 dark:bg-[#3ecf8e]/10"
+                  className="block cursor-pointer mb-2 rounded-lg border border-[#3ecf8e]/30 bg-[#3ecf8e]/5 p-2.5 transition-all hover:border-[#3ecf8e] hover:bg-[#3ecf8e]/10 dark:bg-[#3ecf8e]/10"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#3ecf8e]">
@@ -160,7 +161,7 @@ export default function Sidebar({
                   <p className="text-[10px] text-slate-500 dark:text-zinc-400">
                     Filter quests with unfilled roster spots
                   </p>
-                </div>
+                </Link>
 
                 {skillGuilds.map((guild) => {
                   const isSelected = pathname === `/guilds/${guild.slug}`;
@@ -175,8 +176,7 @@ export default function Sidebar({
                         }`}
                     >
                       <span className="flex items-center gap-2.5 truncate">
-                        <span className="text-sm">{guild.name
-                        }</span>
+                        <span className="text-sm">{guild.emoji}</span>
                         <span className="truncate">{guild.name}</span>
                       </span>
                       <span className="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0">
@@ -238,14 +238,19 @@ export default function Sidebar({
             {activityExpanded && (
               <div className="mt-1.5 space-y-0.5">
                 <Link
-                  href="/profile"
+                  href="/skills?view=tree"
+                  onClick={() => {
+                    try { window.localStorage.setItem("sidequest_skills_view", "tree"); } catch {}
+                    onClose?.();
+                  }}
                   className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-[#1c1c1c] dark:hover:text-zinc-100 transition-colors"
                 >
                   <Layers className="h-4 w-4 text-[#3ecf8e]" />
                   <span>Skill Progression Tree</span>
                 </Link>
                 <Link
-                  href="/profile"
+                  href="/profile#badges"
+                  onClick={onClose}
                   className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-[#1c1c1c] dark:hover:text-zinc-100 transition-colors"
                 >
                   <ShieldCheck className="h-4 w-4 text-amber-400" />

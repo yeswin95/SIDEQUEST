@@ -51,22 +51,14 @@ export default function ProfileMenu({ onClose, onCustomizeCard }: ProfileMenuPro
           <span>Profile Page</span>
         </Link>
 
-        <a
+        <Link
           href="/profile#account-details"
-          onClick={() => {
-            onClose();
-            const el = document.getElementById("account-details");
-            if (el) {
-              el.scrollIntoView({ behavior: "smooth" });
-            } else {
-              window.location.href = "/profile#account-details";
-            }
-          }}
+          onClick={onClose}
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:text-zinc-300 dark:hover:bg-[#232323] dark:hover:text-zinc-100"
         >
           <Info className="h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
           <span>Account Details</span>
-        </a>
+        </Link>
 
         <button
           type="button"

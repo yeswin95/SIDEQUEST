@@ -140,9 +140,13 @@ export default function CreateQuestModal({
       setRoles([{ roleTitle: "Full Stack Developer", spotCount: 1, requiredSkillNames: ["Java", "React"], skillInput: "" }]);
     } catch (err: any) {
       setLoading(false);
-      console.warn("API submission fallback:", err);
-      onQuestCreated();
-      onClose();
+      const msg = err?.message || "Failed to publish quest. Please check backend connectivity.";
+      // Avoid false-positive UX: show error instead of silently pretending success
+      if (String(msg).includes("API Error 401") || String(msg).includes("401")) {
+        setError("Please sign in again to publish a quest.");
+      } else {
+        setError(msg);
+      }
     }
   };
 

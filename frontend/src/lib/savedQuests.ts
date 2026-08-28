@@ -28,8 +28,9 @@ export function getSavedQuestIds(): string[] {
 }
 
 export function setQuestSaved(quest: SavedQuest, saved: boolean) {
+  if (typeof window === "undefined") return;
   const quests = getSavedQuests().filter((item) => item.id !== quest.id);
   if (saved) quests.unshift(quest);
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(quests));
-  window.dispatchEvent(new CustomEvent(SAVED_QUESTS_CHANGED));
+  try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(quests)); } catch {}
+  try { window.dispatchEvent(new CustomEvent(SAVED_QUESTS_CHANGED)); } catch {}
 }

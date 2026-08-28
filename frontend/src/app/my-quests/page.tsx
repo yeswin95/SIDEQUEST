@@ -34,7 +34,12 @@ export default function MyQuestsPage() {
       setIsCreateModalOpen(true);
     }
   };
-  const load = async () => { setLoading(true); setError(""); try { const [profile, projects, applications] = await Promise.all([api.profiles.getMe(), api.projects.list(), api.applications.getMyApplications()]); setPosted((projects as Quest[]).filter((quest) => quest.owner?.id === profile?.userId)); setApplied(applications as Application[]); } catch { setError("Quest management is unavailable until you sign in to the SideQuest backend."); } finally { setLoading(false); } };
+  const load = async () => { setLoading(true); setError(""); try { const [profile, projects, applications] = await Promise.all([api.profiles.getMe(), api.projects.list(), api.applications.getMyApplications()]); const myId = String(profile?.userId ?? profile?.id ?? ""); const myEmail = profile?.email?.toLowerCase();
+      setPosted((projects as Quest[]).filter((quest) => {
+        const ownerId = String((quest as any).owner?.id ?? (quest as any).owner?.userId ?? (quest as any).ownerId ?? "");
+        const ownerEmail = (quest as any).owner?.email?.toLowerCase?.();
+        return (myId && ownerId && ownerId === myId) || (myEmail && ownerEmail && ownerEmail === myEmail);
+      })); setApplied(applications as Application[]); } catch { setError("Quest management is unavailable until you sign in to the SideQuest backend."); } finally { setLoading(false); } };
   useEffect(() => { load(); }, []);
   const openApplicants = async (quest: Quest) => { setSelectedQuest(quest); setApplicants([]); try { setApplicants(await api.projects.getApplications(quest.id) as Application[]); } catch { setError("Unable to load applicants for this quest."); } };
   const decide = async (application: Application, status: "ACCEPTED" | "REJECTED") => { try { await api.applications.updateStatus(application.id, status); setApplicants((current) => current.map((item) => item.id === application.id ? { ...item, applicationStatus: status } : item)); if (status === "ACCEPTED" && selectedQuest) setPosted((current) => current.map((quest) => quest.id === selectedQuest.id ? { ...quest, status: "IN_PROGRESS" } : quest)); } catch { setError("Unable to update this application. Please try again."); } };

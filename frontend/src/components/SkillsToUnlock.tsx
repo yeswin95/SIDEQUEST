@@ -6,20 +6,21 @@ import { Skill, mockSkills } from "@/lib/skillsData";
 export interface SkillsToUnlockProps {
   skills: Skill[];
   onSelect: (id: string) => void;
+  completedIds?: Set<string>;
 }
 
-function getPrereqChecks(skill: Skill) {
+function getPrereqChecks(skill: Skill, completedIds?: Set<string>) {
   return skill.prerequisites.map((prereqId) => {
     const prereq = mockSkills.find((s) => s.id === prereqId);
     return {
       id: prereqId,
       name: prereq ? prereq.name : prereqId,
-      met: prereq ? prereq.status === "mastered" : false,
+      met: completedIds ? completedIds.has(prereqId) : prereq ? prereq.status === "mastered" : false,
     };
   });
 }
 
-export default function SkillsToUnlock({ skills, onSelect }: SkillsToUnlockProps) {
+export default function SkillsToUnlock({ skills, onSelect, completedIds }: SkillsToUnlockProps) {
   const lockedSkills = skills.filter((s) => s.status === "locked");
 
   return (
@@ -28,7 +29,7 @@ export default function SkillsToUnlock({ skills, onSelect }: SkillsToUnlockProps
 
       <div className="space-y-3">
         {lockedSkills.map((skill) => {
-          const checks = getPrereqChecks(skill);
+          const checks = getPrereqChecks(skill, completedIds);
           return (
             <button
               key={skill.id}

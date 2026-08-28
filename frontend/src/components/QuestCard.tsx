@@ -126,8 +126,12 @@ export default function QuestCard({
     }
   };
 
-  const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href);
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/#quest-${id}`;
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(shareUrl);
+      else if (typeof navigator.share === "function") await (navigator as any).share({ title, url: shareUrl });
+    } catch {}
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
