@@ -43,6 +43,8 @@ export interface QuestCardProps {
   joinLabel?: string;
   isSaved?: boolean;
   onSavedChange?: (id: string, saved: boolean) => void;
+  isAuthenticated?: boolean;
+  onRequireAuth?: (action: "upvote" | "bookmark") => void;
 }
 
 function timeAgo(dateString: string): string {
@@ -88,6 +90,8 @@ export default function QuestCard({
   joinLabel = "Apply to Join",
   isSaved,
   onSavedChange,
+  isAuthenticated,
+  onRequireAuth,
 }: QuestCardProps) {
   const [upvoted, setUpvoted] = useState<boolean | null>(null);
   const [upvotes, setUpvotes] = useState(initialUpvotes);
@@ -99,6 +103,10 @@ export default function QuestCard({
   const isFull = totalSpots > 0 && filledSpots >= totalSpots;
 
   const handleVote = (type: "up" | "down") => {
+    if (!isAuthenticated) {
+      onRequireAuth?.("upvote");
+      return;
+    }
     if (type === "up") {
       if (upvoted === true) {
         setUpvoted(null);
@@ -125,6 +133,10 @@ export default function QuestCard({
   };
 
   const toggleSaved = () => {
+    if (!isAuthenticated) {
+      onRequireAuth?.("bookmark");
+      return;
+    }
     const next = !bookmarked;
     setBookmarked(next);
     setQuestSaved({ id, title, description, ownerName, ownerRole, guildTag, datePosted, requiredSkills, roles, repoLink, upvotes, commentsCount }, next);

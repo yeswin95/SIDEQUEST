@@ -7,14 +7,12 @@ import SkillNodeTree, { SkillTreeNode } from "@/components/SkillNodeTree";
 import SkillDetailsModal from "@/components/SkillDetailsModal";
 import NextGoals from "@/components/NextGoals";
 import SkillsToUnlock from "@/components/SkillsToUnlock";
-import CreateQuestModal from "@/components/CreateQuestModal";
 import { mockSkills, Skill } from "@/lib/skillsData";
 import { loadCompletedSkillIds, loadGoals, saveCompletedSkillIds, saveGoals, UserGoal } from "@/lib/skillState";
 import { Layers, List, Network } from "lucide-react";
 
 export default function SkillsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
   const [skillQuery, setSkillQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -66,10 +64,10 @@ export default function SkillsPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 dark:bg-[#121212] dark:text-[#ededed] flex flex-col">
-      <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} onOpenCreateQuest={() => setIsCreateModalOpen(true)} />
+      <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="flex-1 flex">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpenCreateQuest={() => setIsCreateModalOpen(true)} />
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         <div className="flex-1 lg:pl-64 flex justify-center">
           <main className="w-full max-w-6xl px-4 sm:px-6 py-6 space-y-6">
@@ -135,8 +133,6 @@ export default function SkillsPage() {
       </div>
 
       <SkillDetailsModal skill={selectedSkill} allSkills={resolvedSkills} completed={selectedSkill ? completed.has(selectedSkill.id) : false} locked={selectedSkill ? !completed.has(selectedSkill.id) && !isUnlocked(selectedSkill) : false} inGoals={selectedSkill ? goals.some((goal) => goal.skillId === selectedSkill.id) : false} onToggleCompleted={() => { if (selectedSkill) toggleDone(selectedSkill); }} onAddGoal={() => { if (selectedSkill) addSkillGoal(selectedSkill); }} onClose={() => setSelectedSkillId(null)} />
-
-      <CreateQuestModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onQuestCreated={() => {}} />
     </div>
   );
 }

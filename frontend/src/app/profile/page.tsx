@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import PlayerProfileCard, { PlayerSkill, ActiveStatus } from "@/components/PlayerProfileCard";
-import CreateQuestModal from "@/components/CreateQuestModal";
 import ConnectedHandles from "@/components/ConnectedHandles";
 import BadgeGrid from "@/components/achievements/BadgeGrid";
 import { mockAchievements, mockCampusBadges } from "@/lib/skillsData";
@@ -26,7 +25,6 @@ const initialSkills: PlayerSkill[] = [
 
 export default function ProfilePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeStatus, setActiveStatus] = useState<ActiveStatus>("OPEN_TO_JOIN");
   
   // Profile settings
@@ -282,14 +280,12 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 dark:bg-[#121212] dark:text-[#ededed] flex flex-col">
       <Navbar
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        onOpenCreateQuest={() => setIsCreateModalOpen(true)}
       />
 
       <div className="flex-1 flex">
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
-          onOpenCreateQuest={() => setIsCreateModalOpen(true)}
         />
 
         <div className="flex-1 lg:pl-64 flex justify-center">
@@ -663,12 +659,6 @@ export default function ProfilePage() {
       </div>
 
       {/* Modals */}
-      <CreateQuestModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onQuestCreated={() => {}}
-      />
-
       <CardCustomizationModal
         isOpen={isCustomizerOpen}
         onClose={() => setIsCustomizerOpen(false)}

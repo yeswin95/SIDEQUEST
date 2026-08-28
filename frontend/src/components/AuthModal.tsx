@@ -7,9 +7,10 @@ import { api, setStoredToken } from "@/lib/api";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  redirectTo?: string;
 }
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, redirectTo }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -42,7 +43,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           // Trigger global auth refresh
           window.dispatchEvent(new CustomEvent("sidequest_auth_changed"));
           window.dispatchEvent(new CustomEvent("sidequest_avatar_changed"));
-          onClose();
+          
+          if (redirectTo) {
+            window.location.href = redirectTo;
+          } else {
+            onClose();
+          }
         } else {
           throw new Error("Failed to retrieve access token from backend.");
         }
@@ -70,7 +76,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           // Trigger global auth refresh
           window.dispatchEvent(new CustomEvent("sidequest_auth_changed"));
           window.dispatchEvent(new CustomEvent("sidequest_avatar_changed"));
-          onClose();
+          
+          if (redirectTo) {
+            window.location.href = redirectTo;
+          } else {
+            onClose();
+          }
         } else {
           throw new Error("Failed to register and log in.");
         }
