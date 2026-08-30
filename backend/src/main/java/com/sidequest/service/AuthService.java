@@ -9,6 +9,7 @@ import com.sidequest.enums.UserActiveStatus;
 import com.sidequest.repository.UserRepository;
 import com.sidequest.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -16,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -27,27 +29,56 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
+        // Validate required DB fields explicitly to give 400 not 500
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        if (request.getPassword() == null || request.getPassword().length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters");
+        }
+        if (request.getFullName() == null || request.getFullName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Full name is required");
+        }
+        if (request.getMajor() == null || request.getMajor().trim().isEmpty()) {
+            throw new IllegalArgumentException("Major is required");
+        }
+        if (request.getCollegeYear() == null) {
+            throw new IllegalArgumentException("College year is required");
+        }
+
+        String email = request.getEmail().trim().toLowerCase();
+        log.info("Register attempt for email={} fullName={} major={} collegeYear={}", email, request.getFullName(), request.getMajor(), request.getCollegeYear());
+
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("Email is already registered");
         }
 
-        User user = User.builder()
-                .email(request.getEmail().trim().toLowerCase())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .build();
+        try {
+            User user = User.builder()
+                    .email(email)
+                    .passwordHash(passwordEncoder.encode(request.getPassword()))
+                    .build();
 
-        Profile profile = Profile.builder()
-                .user(user)
-                .fullName(request.getFullName().trim())
-                .collegeYear(request.getCollegeYear())
-                .major(request.getMajor().trim())
-                .activeStatus(UserActiveStatus.ACTIVE)
-                .build();
+            Profile profile = Profile.builder()
+                    .user(user)
+                    .fullName(request.getFullName().trim())
+                    // Ensure DB constraints: college_year 1-8, major not empty, fullName not empty
+                    .collegeYear(request.getCollegeYear())
+                    .major(request.getMajor().trim())
+                    .activeStatus(UserActiveStatus.ACTIVE)
+                    .build();
 
-        user.setProfile(profile);
-        User savedUser = userRepository.save(user);
+            user.setProfile(profile);
+            // Completed skills / XP / rank / badges are zeroed by default - no extra DB fields needed.
+            // UserSkill, XP are derived tables initialized empty.
+            User savedUser = userRepository.save(user);
+            log.info("User registered successfully id={} email={}", savedUser.getId(), savedUser.getEmail());
 
-        return buildAuthResponse(savedUser);
+            return buildAuthResponse(savedUser);
+        } catch (Exception ex) {
+            log.error("Registration failed for email={} error={}", email, ex.getMessage(), ex);
+            throw ex;
+        }
     }
 
     @Transactional(readOnly = true)
@@ -70,15 +101,29 @@ public class AuthService {
     }
 
     private AuthResponse buildAuthResponse(User user) {
-        String token = jwtTokenProvider.generateToken(user.getId(), user.getEmail());
+        if (user.getId() == null) {
+            log.error("buildAuthResponse called with null userId for email={}", user.getEmail());
+            throw new IllegalStateException("User ID not generated - database save may have failed");
+        }
+        // Profile may be lazy; guard against NPE which would become 500
+        String fullName = user.getProfile() != null ? user.getProfile().getFullName() : "";
+        String email = user.getEmail();
+
+        String token;
+        try {
+            token = jwtTokenProvider.generateToken(user.getId(), email);
+        } catch (Exception ex) {
+            log.error("JWT generation failed for userId={} - check JWT_SECRET (32+ chars) and DB connection", user.getId(), ex);
+            throw new IllegalStateException("Failed to generate JWT - check JWT_SECRET and server config", ex);
+        }
 
         return AuthResponse.builder()
                 .accessToken(token)
                 .tokenType("Bearer")
                 .expiresInMs(jwtTokenProvider.getExpirationMs())
                 .userId(user.getId())
-                .email(user.getEmail())
-                .fullName(user.getProfile().getFullName())
+                .email(email)
+                .fullName(fullName)
                 .build();
     }
 }

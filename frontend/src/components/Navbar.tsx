@@ -33,6 +33,7 @@ export default function Navbar({
   const [name, setName] = useState("Alex");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authInitialTab, setAuthInitialTab] = useState<"signin" | "signup">("signin");
 
   useEffect(() => {
     const loadData = () => {
@@ -155,7 +156,7 @@ export default function Navbar({
           ) : (
             <button
               type="button"
-              onClick={() => setIsAuthModalOpen(true)}
+              onClick={() => { setAuthInitialTab("signin"); setIsAuthModalOpen(true); }}
               className="rounded-lg bg-slate-900 border border-slate-700 hover:border-slate-500 px-3.5 py-1.5 text-xs font-bold text-white transition-all dark:bg-[#161616] dark:border-[#282828] dark:text-zinc-300 dark:hover:border-[#383838]"
             >
               Sign In
@@ -174,6 +175,7 @@ export default function Navbar({
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authInitialTab}
       />
     </nav>
   );

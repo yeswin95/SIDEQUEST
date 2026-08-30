@@ -1,5 +1,8 @@
 package com.sidequest.exception;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
@@ -13,6 +16,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -59,6 +63,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Bad request: {}", ex.getMessage());
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problem.setTitle("Bad Request");
         problem.setProperty("timestamp", Instant.now());
@@ -71,6 +76,7 @@ public class GlobalExceptionHandler {
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
             fieldErrors.put(error.getField(), error.getDefaultMessage());
         }
+        log.warn("Validation failed: {}", fieldErrors);
 
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST,
@@ -79,6 +85,53 @@ public class GlobalExceptionHandler {
         problem.setTitle("Validation Error");
         problem.setProperty("timestamp", Instant.now());
         problem.setProperty("errors", fieldErrors);
+        return problem;
+    }
+
+    // --- Added for registration 500 debugging ---
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.error("Database constraint violation", ex);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT, "Database constraint violation: " + ex.getMostSpecificCause().getMessage());
+        problem.setTitle("Conflict");
+        problem.setProperty("timestamp", Instant.now());
+        return problem;
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ProblemDetail handleDataAccess(DataAccessException ex) {
+        log.error("Database access error", ex);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.INTERNAL_SERVER_ERROR, "Database error: " + ex.getMostSpecificCause().getMessage());
+        problem.setTitle("Database Error");
+        problem.setProperty("timestamp", Instant.now());
+        return problem;
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ProblemDetail handleIllegalState(IllegalStateException ex) {
+        log.error("Illegal state (likely JWT_SECRET or DB config missing)", ex);
+        String detail = ex.getMessage() != null ? ex.getMessage() : "Server misconfiguration";
+        // Avoid leaking full stack to client but give actionable hint
+        if (detail.contains("JWT_SECRET") || detail.contains("jwt")) {
+            detail = "Server misconfiguration: JWT secret not set. Set JWT_SECRET env (32+ chars).";
+        }
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, detail);
+        problem.setTitle("Server Misconfiguration");
+        problem.setProperty("timestamp", Instant.now());
+        return problem;
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleGeneric(Exception ex) {
+        log.error("Unhandled exception", ex);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                ex.getMessage() != null ? ex.getMessage() : "Internal server error");
+        problem.setTitle("Internal Server Error");
+        problem.setProperty("timestamp", Instant.now());
         return problem;
     }
 }

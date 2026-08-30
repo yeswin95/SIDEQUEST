@@ -24,9 +24,12 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
   // Form fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [major, setMajor] = useState("");
   const [collegeYear, setCollegeYear] = useState<number>(3); // Default Junior (3)
+
+  const passwordsMismatch = activeTab === "signup" && confirmPassword.length > 0 && password !== confirmPassword;
 
   if (!isOpen) return null;
 
@@ -59,11 +62,14 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
           throw new Error("Failed to retrieve access token from backend.");
         }
       } else {
-        if (!email.trim() || !password || !fullName.trim() || !major.trim()) {
+        if (!email.trim() || !password || !confirmPassword || !fullName.trim() || !major.trim()) {
           throw new Error("All fields are required for sign up.");
         }
         if (password.length < 8) {
           throw new Error("Password must be at least 8 characters long.");
+        }
+        if (password !== confirmPassword) {
+          throw new Error("Passwords do not match");
         }
         const res = await api.auth.register({
           email: email.trim(),
@@ -275,16 +281,42 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-900 focus:border-[#3ecf8e] focus:bg-white focus:outline-none dark:border-[#282828] dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors"
+                className={`w-full rounded-lg border bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors ${activeTab === "signup" && password && password.length < 8 ? "border-amber-300 focus:border-amber-400" : "border-slate-200 focus:border-[#3ecf8e] dark:border-[#282828]"}`}
               />
             </div>
+            {activeTab === "signup" && password && password.length > 0 && password.length < 8 && (
+              <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">Password must be at least 8 characters</p>
+            )}
           </div>
+
+          {/* Confirm Password - signup only */}
+          {activeTab === "signup" && (
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1 block">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-zinc-500" />
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={`w-full rounded-lg border bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors ${passwordsMismatch ? "border-red-300 focus:border-red-400 dark:border-red-800" : "border-slate-200 focus:border-[#3ecf8e] dark:border-[#282828]"}`}
+                />
+              </div>
+              {passwordsMismatch && (
+                <p className="mt-1 text-[10px] font-medium text-red-600 dark:text-red-400">Passwords do not match</p>
+              )}
+            </div>
+          )}
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full mt-4 flex items-center justify-center gap-1.5 rounded-lg bg-[#3ecf8e] py-2.5 text-xs font-bold text-[#042f1a] hover:bg-[#34b27b] disabled:opacity-50 transition-colors shadow-sm"
+            disabled={loading || (activeTab === "signup" && passwordsMismatch)}
+            className="w-full mt-4 flex items-center justify-center gap-1.5 rounded-lg bg-[#3ecf8e] py-2.5 text-xs font-bold text-[#042f1a] hover:bg-[#34b27b] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
             {loading ? (
               <>
