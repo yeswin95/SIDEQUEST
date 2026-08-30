@@ -8,10 +8,16 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   redirectTo?: string;
+  initialTab?: "signin" | "signup";
 }
 
-export default function AuthModal({ isOpen, onClose, redirectTo }: AuthModalProps) {
-  const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
+export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: AuthModalProps) {
+  const [activeTab, setActiveTab] = useState<"signin" | "signup">(initialTab || "signin");
+
+  // Sync tab when modal opens with a requested initialTab (Login vs Register CTA)
+  React.useEffect(() => {
+    if (isOpen && initialTab) setActiveTab(initialTab);
+  }, [isOpen, initialTab]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -72,6 +78,15 @@ export default function AuthModal({ isOpen, onClose, redirectTo }: AuthModalProp
           localStorage.setItem("sidequest_email", res.email);
           localStorage.setItem("sidequest_major", major.trim());
           localStorage.setItem("sidequest_grad_year", String(2024 + collegeYear));
+          // Fresh user: zeroed-out dashboard - clear any previous user's local state
+          try {
+            localStorage.removeItem("sidequest_completed_skill_ids");
+            localStorage.removeItem("sidequest_next_goals");
+            localStorage.removeItem("sidequest_avatar");
+            localStorage.removeItem("sidequest_bio");
+            localStorage.removeItem("sidequest_card_config");
+            localStorage.removeItem("sidequest_user_handle");
+          } catch {}
 
           // Trigger global auth refresh
           window.dispatchEvent(new CustomEvent("sidequest_auth_changed"));

@@ -10,7 +10,9 @@ import NextGoals from "@/components/NextGoals";
 import SkillsToUnlock from "@/components/SkillsToUnlock";
 import { mockSkills, Skill } from "@/lib/skillsData";
 import { loadCompletedSkillIds, loadGoals, saveCompletedSkillIds, saveGoals, UserGoal } from "@/lib/skillState";
-import { Layers, List, Network } from "lucide-react";
+import { getStoredToken } from "@/lib/api";
+import AuthModal from "@/components/AuthModal";
+import { Layers, List, Network, Lock } from "lucide-react";
 
 function SkillsPageContent() {
   const searchParams = useSearchParams();
@@ -21,8 +23,23 @@ function SkillsPageContent() {
   const [activeView, setActiveView] = useState<"list" | "tree">("list");
   const [completedSkillIds, setCompletedSkillIds] = useState<string[]>([]);
   const [goals, setGoals] = useState<UserGoal[]>([]);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authInitialTab, setAuthInitialTab] = useState<"signin" | "signup">("signin");
   const categories = useMemo(() => Array.from(new Set(mockSkills.map((skill) => skill.category))).sort(), []);
-  useEffect(() => { setCompletedSkillIds(loadCompletedSkillIds(mockSkills.filter((skill) => skill.status === "mastered").map((skill) => skill.id))); setGoals(loadGoals()); }, []);
+  // Fresh user: zeroed-out - no pre-completed skills (was previously seeded with mastered defaults)
+  useEffect(() => { setCompletedSkillIds(loadCompletedSkillIds([])); setGoals(loadGoals()); }, []);
+  useEffect(() => {
+    const checkAuth = () => setIsAuthed(!!getStoredToken());
+    checkAuth();
+    window.addEventListener("sidequest_auth_changed", checkAuth);
+    window.addEventListener("storage", checkAuth);
+    return () => {
+      window.removeEventListener("sidequest_auth_changed", checkAuth);
+      window.removeEventListener("storage", checkAuth);
+    };
+  }, []);
+  const openAuth = (tab: "signin" | "signup") => { setAuthInitialTab(tab); setAuthModalOpen(true); };
   const completed = new Set(completedSkillIds);
   const isUnlocked = (skill: Skill) => skill.prerequisites.every((id) => completed.has(id));
   const resolvedSkills = mockSkills.map((skill) => ({ ...skill, status: completed.has(skill.id) ? "mastered" as const : "locked" as const, progress: completed.has(skill.id) ? 100 : 0 }));
@@ -101,7 +118,19 @@ function SkillsPageContent() {
               </div>
             </header>
 
-            {activeView === "list" ? <div key="list" className="animate-[skills-view-fade_180ms_ease-out] space-y-6"><section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#282828] dark:bg-[#1c1c1c]">
+            {!isAuthed ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm dark:border-[#282828] dark:bg-[#1c1c1c] flex flex-col items-center text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#3ecf8e]/10 text-[#3ecf8e] mb-4">
+                  <Lock className="h-6 w-6" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-[#ededed]">Please login or register to view your skill tree.</h2>
+                <p className="mt-1 max-w-md text-xs text-slate-500 dark:text-zinc-400">Sign in to track your learning paths, unlock skills, and grow your matrix. New users start with a clean Bronze tier.</p>
+                <div className="mt-5 flex gap-3">
+                  <button type="button" onClick={() => openAuth("signin")} className="rounded-lg bg-[#3ecf8e] px-5 py-2 text-xs font-bold text-[#042f1a] hover:bg-[#34b27b]">Login</button>
+                  <button type="button" onClick={() => openAuth("signup")} className="rounded-lg border border-slate-200 bg-white px-5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-[#282828] dark:bg-[#161616] dark:text-zinc-300">Register</button>
+                </div>
+              </div>
+            ) : activeView === "list" ? <div key="list" className="animate-[skills-view-fade_180ms_ease-out] space-y-6"><section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#282828] dark:bg-[#1c1c1c]">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
                 <div>
                   <h2 className="text-sm font-semibold text-slate-900 dark:text-[#ededed]">All skills</h2>
@@ -145,6 +174,7 @@ function SkillsPageContent() {
       </div>
 
       <SkillDetailsModal skill={selectedSkill} allSkills={resolvedSkills} completed={selectedSkill ? completed.has(selectedSkill.id) : false} locked={selectedSkill ? !completed.has(selectedSkill.id) && !isUnlocked(selectedSkill) : false} inGoals={selectedSkill ? goals.some((goal) => goal.skillId === selectedSkill.id) : false} onToggleCompleted={() => { if (selectedSkill) toggleDone(selectedSkill); }} onAddGoal={() => { if (selectedSkill) addSkillGoal(selectedSkill); }} onClose={() => setSelectedSkillId(null)} />
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} initialTab={authInitialTab} />
     </div>
   );
 }

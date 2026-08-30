@@ -8,40 +8,39 @@ import ConnectedHandles from "@/components/ConnectedHandles";
 import BadgeGrid from "@/components/achievements/BadgeGrid";
 import { mockAchievements, mockCampusBadges } from "@/lib/skillsData";
 import { api, getStoredToken } from "@/lib/api";
-import { User, Camera, Trash2, Edit2, CreditCard } from "lucide-react";
+import { User, Camera, Trash2, Edit2, CreditCard, Lock } from "lucide-react";
 import MetalPlayerCard, { PlayerCardConfig } from "@/components/MetalPlayerCard";
 import CardCustomizationModal from "@/components/CardCustomizationModal";
 import AccountDetails from "@/components/AccountDetails";
+import AuthModal from "@/components/AuthModal";
 import { getHighestTier, getTierTokens } from "@/lib/tierConfig";
 
-const initialSkills: PlayerSkill[] = [
-  { id: "1", skillName: "Java", category: "Backend", rankTier: "GOLD", verified: true },
-  { id: "2", skillName: "Spring Boot", category: "Backend", rankTier: "PLATINUM", verified: true },
-  { id: "3", skillName: "React", category: "Frontend", rankTier: "SILVER", verified: true },
-  { id: "4", skillName: "PostgreSQL", category: "Data", rankTier: "GOLD" },
-  { id: "5", skillName: "Docker", category: "DevOps", rankTier: "PLATINUM", verified: true },
-  { id: "6", skillName: "Figma", category: "Design", rankTier: "BRONZE" },
-];
+// Kept for reference only - not used as default for authenticated users (fresh user = zeroed Bronze/0)
+// Previously: 6 hardcoded demo skills that leaked for new users.
+const initialSkills: PlayerSkill[] = [];
 
 export default function ProfilePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeStatus, setActiveStatus] = useState<ActiveStatus>("OPEN_TO_JOIN");
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authInitialTab, setAuthInitialTab] = useState<"signin" | "signup">("signin");
   
-  // Profile settings
+  // Profile settings - zeroed defaults for fresh user (Bronze/0). No mock "Alex Rivera".
   const [profile, setProfile] = useState({
-    fullName: "Alex Rivera",
-    major: "Computer Science",
-    gradYear: 2027,
-    bio: "Full stack developer & systems enthusiast. Always looking for innovative hackathon projects and campus collaborations.",
-    skills: initialSkills,
+    fullName: "",
+    major: "",
+    gradYear: new Date().getFullYear() + 1,
+    bio: "",
+    skills: initialSkills as PlayerSkill[],
   });
 
-  // Profile Header States
-  const [displayName, setDisplayName] = useState(profile.fullName);
-  const [userHandle, setUserHandle] = useState("@alexrivera");
-  const [emailAddress, setEmailAddress] = useState("alex.rivera@campus.edu");
-  const [academicMajor, setAcademicMajor] = useState(profile.major);
-  const [graduationYear, setGraduationYear] = useState(profile.gradYear);
+  // Profile Header States - start empty, populated only from real DB/localStorage
+  const [displayName, setDisplayName] = useState("");
+  const [userHandle, setUserHandle] = useState("");
+  const [emailAddress, setEmailAddress] = useState("");
+  const [academicMajor, setAcademicMajor] = useState("");
+  const [graduationYear, setGraduationYear] = useState<number>(new Date().getFullYear() + 1);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Avatar upload
@@ -76,15 +75,29 @@ export default function ProfilePage() {
   const [bio, setBio] = useState<string>("");
   const [draftBio, setDraftBio] = useState<string>("");
 
-  // Initial loads
+  // Auth check
   useEffect(() => {
-    // Fetch API user details
+    const checkAuth = () => setIsAuthed(!!getStoredToken());
+    checkAuth();
+    window.addEventListener("sidequest_auth_changed", checkAuth);
+    window.addEventListener("storage", checkAuth);
+    return () => {
+      window.removeEventListener("sidequest_auth_changed", checkAuth);
+      window.removeEventListener("storage", checkAuth);
+    };
+  }, []);
+  const openAuth = (tab: "signin" | "signup") => { setAuthInitialTab(tab); setAuthModalOpen(true); };
+
+  // Initial loads - only when authenticated; zeroed state otherwise
+  useEffect(() => {
+    if (!isAuthed) return;
     api.profiles.getMe()
       .then((res) => {
         if (res) {
-          const mappedName = res.fullName || profile.fullName;
-          const mappedMajor = res.major || profile.major;
-          const mappedYear = res.collegeYear ? 2024 + res.collegeYear : profile.gradYear;
+          const mappedName = res.fullName || "";
+          const mappedMajor = res.major || "";
+          const mappedYear = res.collegeYear ? 2024 + res.collegeYear : new Date().getFullYear() + 1;
+          // Fresh user: no skills -> empty array, not mock fallback
           const mappedSkills = res.skills && res.skills.length > 0 
             ? res.skills.map((s: any) => ({
                 id: s.id || s.skillId || Math.random().toString(),
@@ -93,7 +106,7 @@ export default function ProfilePage() {
                 rankTier: s.rankTier,
                 verified: s.verificationStatus === "VERIFIED",
               })) 
-            : profile.skills;
+            : [];
 
           setProfile((prev) => ({
             ...prev,
@@ -110,23 +123,38 @@ export default function ProfilePage() {
             : "OPEN_TO_JOIN";
           setActiveStatus(mappedStatus);
 
-          if (!localStorage.getItem("sidequest_username")) setDisplayName(mappedName);
-          if (!localStorage.getItem("sidequest_major")) setAcademicMajor(mappedMajor);
+          // Only seed display fields from backend if localStorage empty (no leak of previous user's data)
+          if (!localStorage.getItem("sidequest_username") && mappedName) setDisplayName(mappedName);
+          else if (localStorage.getItem("sidequest_username")) setDisplayName(localStorage.getItem("sidequest_username") || mappedName);
+          if (!localStorage.getItem("sidequest_major") && mappedMajor) setAcademicMajor(mappedMajor);
           if (!localStorage.getItem("sidequest_grad_year")) setGraduationYear(mappedYear);
+          if (localStorage.getItem("sidequest_email")) setEmailAddress(localStorage.getItem("sidequest_email") || res.email || "");
+          else if (res.email) setEmailAddress(res.email);
+          if (localStorage.getItem("sidequest_user_handle")) setUserHandle(localStorage.getItem("sidequest_user_handle") || "");
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isAuthed]);
 
-  // Sync state from LocalStorage on component mount & updates
+  // Sync state from LocalStorage on component mount & updates - gated by auth
   useEffect(() => {
     const loadLocalStorage = () => {
+      if (!isAuthed) {
+        // Unauthenticated: ensure zeroed state, no mock bio/handle leak
+        setAvatarUrl(null);
+        setBio("");
+        setDisplayName("");
+        setUserHandle("");
+        setEmailAddress("");
+        setAcademicMajor("");
+        setGraduationYear(new Date().getFullYear() + 1);
+        return;
+      }
       const storedAvatar = localStorage.getItem("sidequest_avatar");
       setAvatarUrl(storedAvatar);
 
-      const DEFAULT_BIO = "Full stack developer & systems enthusiast. Always looking for innovative hackathon projects and campus collaborations.";
       const storedBio = localStorage.getItem("sidequest_bio");
-      const activeBio = storedBio !== null ? storedBio : DEFAULT_BIO;
+      const activeBio = storedBio !== null ? storedBio : "";
       setBio(activeBio);
       setProfile((prev) => ({ ...prev, bio: activeBio }));
 
@@ -138,6 +166,7 @@ export default function ProfilePage() {
       
       const storedHandle = localStorage.getItem("sidequest_user_handle");
       if (storedHandle) setUserHandle(storedHandle);
+      else setUserHandle("");
 
       const storedEmail = localStorage.getItem("sidequest_email");
       if (storedEmail) setEmailAddress(storedEmail);
@@ -160,6 +189,7 @@ export default function ProfilePage() {
           setCardConfig(JSON.parse(storedConfig));
         } catch (e) {}
       } else {
+        // Fresh user Bronze fallback, not PLATINUM mock
         const highest = getHighestTier(profile.skills.map((s) => s.rankTier));
         setCardConfig((prev) => ({ ...prev, tier: highest }));
       }
@@ -178,7 +208,7 @@ export default function ProfilePage() {
     return () => {
       window.removeEventListener("sidequest_open_card_customizer", handleOpenCustomizer);
     };
-  }, [profile.skills]);
+  }, [profile.skills, isAuthed]);
 
   // Scroll to anchored sections when navigating via hash (e.g., from Sidebar > Verified Badges or ProfileMenu > Account Details)
   useEffect(() => {
@@ -269,27 +299,41 @@ export default function ProfilePage() {
   const highestRank = getHighestTier(profile.skills.map((s) => s.rankTier));
   const highestTokens = getTierTokens(highestRank);
 
+  // Fresh user detection - zeroed stats
+  const isNewUser = isAuthed && profile.skills.length === 0;
+  const displayLevel = isNewUser ? 1 : 12;
+  const displayQuestsCount = isNewUser ? 0 : 27;
+  const displayAchievementsCount = isNewUser ? 0 : 0; // no unlocked for fresh user
+  const displayBadgesCount = isNewUser ? 0 : 0;
+
   const getInitials = (name: string) => {
+    if (!name || !name.trim()) return "?";
     return name
       .trim()
       .split(/\s+/)
       .slice(0, 2)
       .map((p) => p[0]?.toUpperCase() ?? "")
-      .join("");
+      .join("") || "?";
   };
 
-  // Filter list computed values
-  const [selectedRarity] = useState<string>("all"); // Keep for backward compatibility or metadata references if needed, although mostly unused now
+  // Filter list computed values - for fresh user, show zeroed (no earned)
+  const [selectedRarity] = useState<string>("all");
+
+  const zeroedAchievements = useMemo(() => mockAchievements.map(b => ({ ...b, status: "locked" as const, progress: 0, currentValue: 0, earnedDate: undefined })), []);
+  const zeroedCampusBadges = useMemo(() => mockCampusBadges.map(b => ({ ...b, status: "locked" as const, progress: 0, currentValue: 0, earnedDate: undefined })), []);
+
+  const sourceAchievements = isNewUser ? zeroedAchievements : mockAchievements;
+  const sourceCampusBadges = isNewUser ? zeroedCampusBadges : mockCampusBadges;
 
   const filteredAchievements = useMemo(() => {
-    if (selectedStatus === "all") return mockAchievements;
-    return mockAchievements.filter((badge) => badge.status === selectedStatus);
-  }, [selectedStatus]);
+    if (selectedStatus === "all") return sourceAchievements;
+    return sourceAchievements.filter((badge) => badge.status === selectedStatus);
+  }, [selectedStatus, sourceAchievements]);
 
   const filteredCampusBadges = useMemo(() => {
-    if (selectedStatus === "all") return mockCampusBadges;
-    return mockCampusBadges.filter((badge) => badge.status === selectedStatus);
-  }, [selectedStatus]);
+    if (selectedStatus === "all") return sourceCampusBadges;
+    return sourceCampusBadges.filter((badge) => badge.status === selectedStatus);
+  }, [selectedStatus, sourceCampusBadges]);
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 dark:bg-[#121212] dark:text-[#ededed] flex flex-col">
@@ -304,6 +348,21 @@ export default function ProfilePage() {
         />
 
         <div className="flex-1 lg:pl-64 flex justify-center">
+          {!isAuthed ? (
+            <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm dark:border-[#282828] dark:bg-[#1c1c1c] flex flex-col items-center text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#3ecf8e]/10 text-[#3ecf8e] mb-4">
+                  <Lock className="h-6 w-6" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-[#ededed]">Please login or register to view your profile.</h2>
+                <p className="mt-1 max-w-md text-xs text-slate-500 dark:text-zinc-400">Sign in to view your Bronze starter rank, skills, and quests. New accounts start with 0 completed skills and no badges.</p>
+                <div className="mt-5 flex gap-3">
+                  <button type="button" onClick={() => openAuth("signin")} className="rounded-lg bg-[#3ecf8e] px-5 py-2 text-xs font-bold text-[#042f1a] hover:bg-[#34b27b]">Login</button>
+                  <button type="button" onClick={() => openAuth("signup")} className="rounded-lg border border-slate-200 bg-white px-5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-[#282828] dark:bg-[#161616] dark:text-zinc-300">Register</button>
+                </div>
+              </div>
+            </main>
+          ) : (
           <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             
             {/* Header / Account Section */}
@@ -330,8 +389,8 @@ export default function ProfilePage() {
                       {userHandle}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                    Level 12 &middot; <span className="font-semibold" style={{ color: highestTokens.dot }}>{highestRank} Rank</span>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                    Level {displayLevel} &middot; <span className="font-semibold" style={{ color: highestTokens.dot }}>{highestRank} Rank</span>
                   </p>
                 </div>
               </div>
@@ -549,12 +608,12 @@ export default function ProfilePage() {
                     <MetalPlayerCard 
                       config={cardConfig} 
                       userData={{
-                        fullName: profile.fullName,
-                        level: 12,
+                        fullName: profile.fullName || displayName || "New Builder",
+                        level: displayLevel,
                         skillsCount: profile.skills.length,
-                        questsCount: 27,
-                        achievementsCount: mockAchievements.length,
-                        badgesCount: mockCampusBadges.length,
+                        questsCount: displayQuestsCount,
+                        achievementsCount: displayAchievementsCount,
+                        badgesCount: displayBadgesCount,
                         avatarUrl: avatarUrl || undefined,
                         mainSkill: profile.skills[0]?.skillName,
                       }} 
@@ -630,7 +689,7 @@ export default function ProfilePage() {
                     Achievements
                   </h3>
                   <div className="flex-1">
-                    <BadgeGrid badges={filteredAchievements} unfilteredBadges={mockAchievements} />
+                    <BadgeGrid badges={filteredAchievements} unfilteredBadges={sourceAchievements} />
                   </div>
                 </section>
 
@@ -639,7 +698,7 @@ export default function ProfilePage() {
                     Campus Badges
                   </h3>
                   <div className="flex-1">
-                    <BadgeGrid badges={filteredCampusBadges} unfilteredBadges={mockCampusBadges} />
+                    <BadgeGrid badges={filteredCampusBadges} unfilteredBadges={sourceCampusBadges} />
                   </div>
                 </section>
               </div>
@@ -656,13 +715,13 @@ export default function ProfilePage() {
                 {/* Account Details */}
                 <AccountDetails 
                   userData={{
-                    fullName: profile.fullName,
-                    username: userHandle,
-                    email: emailAddress,
-                    major: profile.major,
-                    gradYear: profile.gradYear,
+                    fullName: profile.fullName || displayName || "New Builder",
+                    username: userHandle || "—",
+                    email: emailAddress || "—",
+                    major: profile.major || academicMajor || "—",
+                    gradYear: profile.gradYear || graduationYear,
                     role: "Student Builder",
-                    level: 12,
+                    level: displayLevel,
                     tier: highestRank,
                     joinedYear: 2026,
                   }} 
@@ -670,22 +729,24 @@ export default function ProfilePage() {
               </div>
             </div>
           </main>
+          )}
         </div>
       </div>
 
       {/* Modals */}
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} initialTab={authInitialTab} />
       <CardCustomizationModal
         isOpen={isCustomizerOpen}
         onClose={() => setIsCustomizerOpen(false)}
         initialConfig={cardConfig}
         onSave={handleSaveCardConfig}
         userData={{
-          fullName: profile.fullName,
-          level: 12,
+          fullName: profile.fullName || displayName || "New Builder",
+          level: displayLevel,
           skillsCount: profile.skills.length,
-          questsCount: 27,
-          achievementsCount: mockAchievements.length,
-          badgesCount: mockCampusBadges.length,
+          questsCount: displayQuestsCount,
+          achievementsCount: displayAchievementsCount,
+          badgesCount: displayBadgesCount,
           avatarUrl: avatarUrl || undefined,
           mainSkill: profile.skills[0]?.skillName,
         }}
