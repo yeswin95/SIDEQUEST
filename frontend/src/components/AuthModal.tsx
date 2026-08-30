@@ -116,16 +116,16 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto overflow-x-hidden">
-      {/* Backdrop - no blur (user reported cut-off + unwanted blur). Dim only, covers scrollable area */}
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 overflow-y-auto overflow-x-hidden">
+      {/* Backdrop - dim only, highest layer to cover feed */}
       <div
-        className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 transition-opacity"
+        className="fixed inset-0 z-[9998] bg-slate-900/60 dark:bg-black/70 transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Auth Card - scrollable, centered, never cut off */}
-      <div className="relative z-10 w-full max-w-sm my-8 max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-[#282828] dark:bg-[#1a1a1a] animate-in fade-in zoom-in-95 duration-200">
+      {/* Auth Card - scrollable, centered, never cut off, above feed */}
+      <div className="relative z-[9999] w-full max-w-sm my-8 max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-[#282828] dark:bg-[#1a1a1a] animate-in fade-in zoom-in-95 duration-200">
         {/* Close Button */}
         <button
           type="button"

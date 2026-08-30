@@ -55,8 +55,9 @@ export default function Navbar({
   }, []);
 
   return (
-    <nav className="sticky top-0 z-[100] isolate h-14 border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-[#282828] dark:bg-[#121212]/95">
-      <div className="flex h-full items-center justify-between px-4 sm:px-6 gap-4">
+    <>
+      <nav className="sticky top-0 z-40 h-14 border-b border-slate-200 bg-white dark:border-[#282828] dark:bg-[#121212]">
+        <div className="flex h-full items-center justify-between px-4 sm:px-6 gap-4">
         {/* Left: Sidebar Toggle Button + Swords Logo */}
         <div className="flex items-center gap-3 shrink-0">
           {onToggleSidebar && (
@@ -100,8 +101,8 @@ export default function Navbar({
           <div className="flex-1 max-w-lg hidden sm:block" aria-hidden />
         )}
 
-        {/* Right: Post Quest CTA + Profile Shortcut + Theme Toggle - ensure on top of feed */}
-        <div className="relative z-[101] flex items-center gap-2.5 shrink-0">
+        {/* Right: Post Quest CTA + Profile Shortcut + Theme Toggle */}
+        <div className="flex items-center gap-2.5 shrink-0">
           {onOpenCreateQuest && (
             <button
               type="button"
@@ -171,12 +172,12 @@ export default function Navbar({
           </div>
         </div>
       </div>
-
+      </nav>
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         initialTab={authInitialTab}
       />
-    </nav>
+    </>
   );
 }
