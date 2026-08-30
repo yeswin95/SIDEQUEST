@@ -65,13 +65,10 @@ services:
         value: 10000
       - key: BACKEND_API_URL
         # Frontend rewrites /api/v1/* -> BACKEND_API_URL/api/v1/*
-        # Use backend's internal host via fromService, or hardcode https://sidequest-backend.onrender.com
-        fromService:
-          name: sidequest-backend
-          type: web
-          property: host
-        # Note: fromService.host gives like sidequest-backend.onrender.com (without https)
-        # Next.js rewrite helper handles adding https:// if missing (see next.config.js)
+        # Hardcoded public URL to avoid Render fromService.host returning internal name without domain (ENOTFOUND sidequest-backend-gzia)
+        # If your backend URL is different (e.g. sidequest-backend-xxxx.onrender.com), update it in Render Dashboard -> sidequest-frontend -> Environment
+        value: https://sidequest-backend.onrender.com
+        # Note: previously used fromService.host which returned bare internal host (sidequest-backend-gzia) without .onrender.com causing ENOTFOUND
       - key: NEXT_PUBLIC_APP_URL
         fromService:
           name: sidequest-frontend

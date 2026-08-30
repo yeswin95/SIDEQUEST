@@ -17,6 +17,14 @@ const nextConfig = {
     if (backendBase && !backendBase.startsWith('http://') && !backendBase.startsWith('https://')) {
       backendBase = `https://${backendBase}`;
     }
+    // Fix Render fromService.host that returns internal name without domain (e.g. sidequest-backend-gzia)
+    // If hostname has no dot, append .onrender.com
+    try {
+      const urlForCheck = new URL(backendBase);
+      if (urlForCheck.hostname && !urlForCheck.hostname.includes('.')) {
+        backendBase = `${backendBase}.onrender.com`;
+      }
+    } catch {}
     if (!backendBase) backendBase = 'http://localhost:8080';
     const dest = backendBase.endsWith('/api/v1') ? `${backendBase}/:path*` : `${backendBase}/api/v1/:path*`;
     return [
