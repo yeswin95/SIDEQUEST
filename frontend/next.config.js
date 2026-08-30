@@ -1,6 +1,14 @@
+const path = require("path");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "@": path.resolve(__dirname, "src"),
+    };
+    return config;
+  },
   // For Render deploys: BACKEND_API_URL is injected via env (e.g., https://sidequest-backend.onrender.com)
   // For local dev: falls back to localhost:8080
   async rewrites() {

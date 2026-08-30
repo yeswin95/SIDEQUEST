@@ -52,7 +52,7 @@ services:
     region: oregon
     branch: main
     rootDir: frontend
-    buildCommand: npm ci && npm run build
+    buildCommand: ls -la src/components/Navbar.tsx src/lib/api.ts && cat tsconfig.json && npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /
     autoDeploy: true
