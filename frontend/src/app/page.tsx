@@ -278,8 +278,8 @@ export default function HomePage() {
         />
 
         {/* Content Area (offset by 256px on desktop) */}
-        <div className="flex-1 lg:pl-64 flex justify-center">
-          <main className="w-full max-w-6xl px-4 sm:px-6 py-6 grid grid-cols-1 gap-8 xl:grid-cols-12">
+        <div className="flex-1 lg:pl-64 flex justify-center relative z-0">
+          <main className="w-full max-w-6xl px-4 sm:px-6 py-6 grid grid-cols-1 gap-8 xl:grid-cols-12 relative z-0">
             {/* Center Feed Column */}
             <div className="xl:col-span-8 space-y-4">
               {/* Sort & Feed Filter Bar */}
@@ -411,7 +411,7 @@ export default function HomePage() {
             </div>
 
             {/* Right Secondary Sidebar Widgets */}
-            <div className="hidden xl:block xl:col-span-4 space-y-5 sticky top-20 self-start">
+            <div className="hidden xl:block xl:col-span-4 space-y-5 sticky top-20 self-start z-0">
               {/* Widget 1: Campus Hackathon Spotlight */}
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#282828] dark:bg-[#1c1c1c]">
                 <div className="flex items-center justify-between">
