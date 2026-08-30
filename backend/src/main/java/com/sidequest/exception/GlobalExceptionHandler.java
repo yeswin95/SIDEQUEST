@@ -126,12 +126,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGeneric(Exception ex) {
-        log.error("Unhandled exception", ex);
+        log.error("Unhandled exception: {}: {}", ex.getClass().getName(), ex.getMessage(), ex);
+        String detail = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName() + " (no message)";
+        // Include cause chain for PSQLException etc.
+        Throwable cause = ex.getCause();
+        if (cause != null && cause.getMessage() != null) {
+            detail += " | cause: " + cause.getMessage();
+        }
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                ex.getMessage() != null ? ex.getMessage() : "Internal server error");
+                detail);
         problem.setTitle("Internal Server Error");
         problem.setProperty("timestamp", Instant.now());
+        problem.setProperty("exception", ex.getClass().getName());
         return problem;
     }
 }
