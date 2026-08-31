@@ -17,7 +17,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TYPE user_active_status AS ENUM (
     'ACTIVE',
     'INACTIVE',
-    'SUSPENDED'
+    'SUSPENDED',
+    'IN_A_PARTY'
 );
 
 CREATE TYPE skill_rank_tier AS ENUM (
@@ -48,6 +49,11 @@ CREATE TYPE application_status AS ENUM (
     'PENDING',
     'ACCEPTED',
     'REJECTED'
+);
+
+CREATE TYPE vote_type AS ENUM (
+    'UP',
+    'DOWN'
 );
 
 -- ---------------------------------------------------------------------------
@@ -235,6 +241,22 @@ CREATE INDEX idx_project_applications_status
     ON project_applications (application_status);
 CREATE INDEX idx_project_applications_applied_at
     ON project_applications (applied_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- project_votes — upvote/downvote per user per project
+-- ---------------------------------------------------------------------------
+CREATE TABLE project_votes (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id  UUID        NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+    user_id     UUID        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    vote_type   vote_type   NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT project_votes_project_user_unique UNIQUE (project_id, user_id)
+);
+
+CREATE INDEX idx_project_votes_project_id ON project_votes (project_id);
+CREATE INDEX idx_project_votes_user_id ON project_votes (user_id);
 
 -- ---------------------------------------------------------------------------
 -- updated_at trigger helper

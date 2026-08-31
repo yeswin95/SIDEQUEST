@@ -73,6 +73,7 @@ export const api = {
   },
   profiles: {
     getMe: () => request<any>('/profiles/me'),
+    getById: (userId: string) => request<any>(`/profiles/${userId}`),
     updateMe: (data: any) =>
       request<any>('/profiles/me', {
         method: 'PUT',
@@ -111,6 +112,12 @@ export const api = {
       request<void>(`/projects/${projectId}`, {
         method: 'DELETE',
       }),
+    vote: (projectId: string, type: 'UP' | 'DOWN') =>
+      request<any>(`/projects/${projectId}/vote`, {
+        method: 'POST',
+        body: JSON.stringify({ type }),
+      }),
+    getVote: (projectId: string) => request<any>(`/projects/${projectId}/vote`),
   },
   applications: {
     updateStatus: (applicationId: string, status: 'ACCEPTED' | 'REJECTED') =>

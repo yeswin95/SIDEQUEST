@@ -30,4 +30,17 @@ public class CurrentUserService {
         return userRepository.findByEmailIgnoreCase(authentication.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
     }
+
+    @Transactional(readOnly = true)
+    public java.util.Optional<User> getCurrentUserOptional() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
+                return java.util.Optional.empty();
+            }
+            return userRepository.findByEmailIgnoreCase(authentication.getName());
+        } catch (Exception e) {
+            return java.util.Optional.empty();
+        }
+    }
 }

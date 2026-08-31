@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getSavedQuestIds, setQuestSaved } from "@/lib/savedQuests";
+import { api } from "@/lib/api";
 import {
   Clock,
   Users,
@@ -29,6 +30,7 @@ export interface QuestCardProps {
   title: string;
   description: string;
   ownerName: string;
+  ownerId?: string | null;
   ownerAvatarUrl?: string;
   ownerRole?: string;
   guildTag?: string;
@@ -37,6 +39,8 @@ export interface QuestCardProps {
   roles: PartyRole[];
   repoLink?: string;
   initialUpvotes?: number;
+  initialDownvotes?: number;
+  initialUserVote?: "UP" | "DOWN" | null;
   commentsCount?: number;
   onJoin?: () => void;
   joinDisabled?: boolean;
@@ -45,6 +49,7 @@ export interface QuestCardProps {
   onSavedChange?: (id: string, saved: boolean) => void;
   isAuthenticated?: boolean;
   onRequireAuth?: (action: "upvote" | "bookmark") => void;
+  onProfileClick?: (ownerId: string) => void;
 }
 
 function timeAgo(dateString: string): string {
@@ -76,6 +81,7 @@ export default function QuestCard({
   title,
   description,
   ownerName,
+  ownerId,
   ownerAvatarUrl,
   ownerRole = "Party Leader",
   guildTag = "CampusBuilds",
@@ -84,6 +90,8 @@ export default function QuestCard({
   roles,
   repoLink,
   initialUpvotes = 0,
+  initialDownvotes = 0,
+  initialUserVote = null,
   commentsCount = 0,
   onJoin,
   joinDisabled = false,
@@ -92,38 +100,67 @@ export default function QuestCard({
   onSavedChange,
   isAuthenticated,
   onRequireAuth,
+  onProfileClick,
 }: QuestCardProps) {
-  const [upvoted, setUpvoted] = useState<boolean | null>(null);
-  // Task 4: no hardcoded fallback — use real backend value (0 if none)
+  const [upvoted, setUpvoted] = useState<boolean | null>(() => {
+    if (initialUserVote === "UP") return true;
+    if (initialUserVote === "DOWN") return false;
+    return null;
+  });
+  // Task 4 & 5: real backend values, optimistic UI
   const [upvotes, setUpvotes] = useState(initialUpvotes ?? 0);
+  const [downvotes, setDownvotes] = useState(initialDownvotes ?? 0);
+  const displayScore = upvotes - downvotes;
   const [bookmarked, setBookmarked] = useState(() => isSaved ?? getSavedQuestIds().includes(id));
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setUpvotes(initialUpvotes ?? 0);
+    setDownvotes(initialDownvotes ?? 0);
+    setUpvoted(initialUserVote === "UP" ? true : initialUserVote === "DOWN" ? false : null);
+  }, [initialUpvotes, initialDownvotes, initialUserVote]);
 
   const totalSpots = roles.reduce((acc, r) => acc + r.total, 0);
   const filledSpots = roles.reduce((acc, r) => acc + r.filled, 0);
   const isFull = totalSpots > 0 && filledSpots >= totalSpots;
 
-  const handleVote = (type: "up" | "down") => {
+  const handleVote = async (type: "up" | "down") => {
     if (!isAuthenticated) {
       onRequireAuth?.("upvote");
       return;
     }
+    const voteType = type === "up" ? "UP" : "DOWN";
+    // Optimistic update
+    const prevUp = upvotes;
+    const prevDown = downvotes;
+    const prevVoted = upvoted;
+    let nextUp = prevUp;
+    let nextDown = prevDown;
+    let nextVoted: boolean | null = prevVoted;
     if (type === "up") {
-      if (upvoted === true) {
-        setUpvoted(null);
-        setUpvotes((v) => v - 1);
-      } else {
-        setUpvotes((v) => (upvoted === false ? v + 2 : v + 1));
-        setUpvoted(true);
-      }
+      if (prevVoted === true) { nextUp = prevUp - 1; nextVoted = null; }
+      else if (prevVoted === false) { nextUp = prevUp + 1; nextDown = prevDown - 1; nextVoted = true; }
+      else { nextUp = prevUp + 1; nextVoted = true; }
     } else {
-      if (upvoted === false) {
-        setUpvoted(null);
-        setUpvotes((v) => v + 1);
-      } else {
-        setUpvotes((v) => (upvoted === true ? v - 2 : v - 1));
-        setUpvoted(false);
+      if (prevVoted === false) { nextDown = prevDown - 1; nextVoted = null; }
+      else if (prevVoted === true) { nextUp = prevUp - 1; nextDown = prevDown + 1; nextVoted = false; }
+      else { nextDown = prevDown + 1; nextVoted = false; }
+    }
+    setUpvotes(nextUp);
+    setDownvotes(nextDown);
+    setUpvoted(nextVoted);
+    try {
+      const res = await api.projects.vote(id, voteType as "UP" | "DOWN");
+      if (res) {
+        setUpvotes(typeof res.upvotes === "number" ? res.upvotes : nextUp);
+        setDownvotes(typeof res.downvotes === "number" ? res.downvotes : nextDown);
+        setUpvoted(res.userVote === "UP" ? true : res.userVote === "DOWN" ? false : null);
       }
+    } catch {
+      // revert on error
+      setUpvotes(prevUp);
+      setDownvotes(prevDown);
+      setUpvoted(prevVoted);
     }
   };
 
@@ -150,21 +187,23 @@ export default function QuestCard({
 
   return (
     <article id={`quest-${id}`} className="group rounded-xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm transition-all duration-200 hover:border-slate-300 dark:border-[#282828] dark:bg-[#1c1c1c] dark:shadow-none dark:hover:border-[#383838] dark:hover:bg-[#1f1f1f]">
-      {/* Post Header: Guild Tag + Author + TimeAgo */}
+      {/* Post Header: Guild Tag + Author + TimeAgo — clickable for public profile */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          {ownerAvatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={ownerAvatarUrl}
-              alt={ownerName}
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-slate-100 dark:ring-[#282828]"
-            />
-          ) : (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 ring-2 ring-[#3ecf8e]/20 dark:bg-[#262626] dark:text-zinc-200">
-              {initials(ownerName)}
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => ownerId && onProfileClick?.(ownerId)}
+            disabled={!ownerId}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 ring-2 ring-[#3ecf8e]/20 dark:bg-[#262626] dark:text-zinc-200 overflow-hidden ${ownerId ? "cursor-pointer hover:ring-[#3ecf8e]/40 transition-all" : "cursor-default"}`}
+            title={ownerId ? "View author profile" : undefined}
+          >
+            {ownerAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={ownerAvatarUrl} alt={ownerName} className="h-full w-full object-cover" />
+            ) : (
+              initials(ownerName)
+            )}
+          </button>
 
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -172,9 +211,15 @@ export default function QuestCard({
                 g/{guildTag}
               </span>
               <span className="text-slate-300 dark:text-zinc-700">&middot;</span>
-              <span className="truncate text-xs font-semibold text-slate-900 dark:text-[#ededed]">
+              <button
+                type="button"
+                onClick={() => ownerId && onProfileClick?.(ownerId)}
+                disabled={!ownerId}
+                className={`truncate text-xs font-semibold dark:text-[#ededed] ${ownerId ? "text-slate-900 hover:text-[#3ecf8e] hover:underline cursor-pointer" : "text-slate-900 cursor-default"}`}
+                title={ownerId ? "View author profile" : undefined}
+              >
                 {ownerName}
-              </span>
+              </button>
               <span className="text-[11px] text-slate-400 dark:text-zinc-500">
                 ({ownerRole})
               </span>
@@ -286,7 +331,7 @@ export default function QuestCard({
             <span className={`px-1 text-xs font-semibold tabular-nums ${
               upvoted === true ? "text-[#3ecf8e]" : upvoted === false ? "text-rose-500" : "text-slate-700 dark:text-zinc-300"
             }`}>
-              {upvotes}
+              {displayScore}
             </span>
             <button
               type="button"

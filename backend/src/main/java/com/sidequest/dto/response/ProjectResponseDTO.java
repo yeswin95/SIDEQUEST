@@ -1,6 +1,7 @@
 package com.sidequest.dto.response;
 
 import com.sidequest.enums.ProjectStatus;
+import com.sidequest.enums.VoteType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,6 +33,9 @@ public class ProjectResponseDTO {
     private int totalSpots;
     private int filledSpots;
     private int openSpots;
+    private long upvotes;
+    private long downvotes;
+    private VoteType userVote;
     private Instant createdAt;
     private Instant updatedAt;
 }

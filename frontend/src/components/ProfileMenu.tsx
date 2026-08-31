@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { User, CreditCard, Sliders, LogOut, Info } from "lucide-react";
-import { removeStoredToken } from "@/lib/api";
+import { api, removeStoredToken, getStoredToken } from "@/lib/api";
 import { useEffect, useState } from "react";
+import { getLevelFromSkills } from "@/lib/tierConfig";
 
 interface ProfileMenuProps {
   onClose: () => void;
@@ -12,11 +13,50 @@ interface ProfileMenuProps {
 
 export default function ProfileMenu({ onClose, onCustomizeCard }: ProfileMenuProps) {
   const [name, setName] = useState("Alex Rivera");
+  const [major, setMajor] = useState("Computer Science");
+  const [level, setLevel] = useState(1);
 
-  useEffect(() => {
-    // Dynamically retrieve username if stored locally
+  const syncProfile = async () => {
     const storedName = localStorage.getItem("sidequest_username");
     if (storedName) setName(storedName);
+    const storedMajor = localStorage.getItem("sidequest_major");
+    if (storedMajor) setMajor(storedMajor);
+    if (!getStoredToken()) {
+      setLevel(1);
+      return;
+    }
+    try {
+      const me = await api.profiles.getMe();
+      if (me) {
+        if (me.fullName) setName(me.fullName);
+        if (me.major) setMajor(me.major);
+        const count = Array.isArray(me.skills) ? me.skills.length : 0;
+        setLevel(getLevelFromSkills(count));
+      } else {
+        // fallback to local completed count
+        try {
+          const raw = localStorage.getItem("sidequest_completed_skill_ids");
+          const arr = raw ? JSON.parse(raw) : [];
+          setLevel(getLevelFromSkills(Array.isArray(arr) ? arr.length : 0));
+        } catch {}
+      }
+    } catch {
+      try {
+        const raw = localStorage.getItem("sidequest_completed_skill_ids");
+        const arr = raw ? JSON.parse(raw) : [];
+        setLevel(getLevelFromSkills(Array.isArray(arr) ? arr.length : 0));
+      } catch { setLevel(1); }
+    }
+  };
+
+  useEffect(() => {
+    syncProfile();
+    window.addEventListener("sidequest_auth_changed", syncProfile);
+    window.addEventListener("storage", syncProfile);
+    return () => {
+      window.removeEventListener("sidequest_auth_changed", syncProfile);
+      window.removeEventListener("storage", syncProfile);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -38,7 +78,7 @@ export default function ProfileMenu({ onClose, onCustomizeCard }: ProfileMenuPro
     >
       <div className="px-3 py-2 border-b border-slate-100 dark:border-[#282828] mb-1">
         <p className="text-xs font-semibold text-slate-900 dark:text-[#ededed] truncate">{name}</p>
-        <p className="text-[10px] text-slate-500 dark:text-zinc-400">Computer Science &middot; Lv. 12</p>
+        <p className="text-[10px] text-slate-500 dark:text-zinc-400">{major} &middot; Lv. {level}</p>
       </div>
 
       <div className="space-y-0.5">

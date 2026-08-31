@@ -69,6 +69,32 @@ public class DatabaseMigrationRunner {
                 // user_profiles.rank_tier
                 safeExec("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS rank_tier skill_rank_tier NOT NULL DEFAULT 'BRONZE'");
 
+                // Ensure new enum value IN_A_PARTY exists for availability persistence
+                safeExec("""
+                        DO $$
+                        BEGIN
+                          IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'IN_A_PARTY' AND enumtypid = 'user_active_status'::regtype) THEN
+                            ALTER TYPE user_active_status ADD VALUE 'IN_A_PARTY';
+                          END IF;
+                        END
+                        $$;
+                        """);
+
+                // Vote system: enum + table
+                safeExec("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vote_type') THEN CREATE TYPE vote_type AS ENUM ('UP', 'DOWN'); END IF; END $$;");
+                safeExec("""
+                        CREATE TABLE IF NOT EXISTS project_votes (
+                            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                            project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                            vote_type vote_type NOT NULL,
+                            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                            CONSTRAINT project_votes_project_user_unique UNIQUE (project_id, user_id)
+                        )
+                        """);
+                safeExec("CREATE INDEX IF NOT EXISTS idx_project_votes_project_id ON project_votes(project_id)");
+                safeExec("CREATE INDEX IF NOT EXISTS idx_project_votes_user_id ON project_votes(user_id)");
+
                 log.info("Startup DB migration completed successfully");
             } catch (Exception e) {
                 log.error("Startup DB migration failed: {}", e.getMessage(), e);

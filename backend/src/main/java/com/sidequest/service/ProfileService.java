@@ -9,6 +9,7 @@ import com.sidequest.entity.UserSkill;
 import com.sidequest.enums.SkillRank;
 import com.sidequest.exception.ResourceNotFoundException;
 import com.sidequest.repository.ProfileRepository;
+import com.sidequest.repository.UserRepository;
 import com.sidequest.repository.UserSkillRepository;
 import com.sidequest.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class ProfileService {
     private final CurrentUserService currentUserService;
     private final ProfileRepository profileRepository;
     private final UserSkillRepository userSkillRepository;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public ProfileResponseDTO getMyProfile() {
@@ -33,6 +35,16 @@ public class ProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
         List<UserSkill> userSkills = userSkillRepository.findByUserIdWithSkill(user.getId());
         return toProfileResponse(user, profile, userSkills);
+    }
+
+    @Transactional(readOnly = true)
+    public ProfileResponseDTO getPublicProfile(java.util.UUID userId) {
+        User fullUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        Profile profile = profileRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+        List<UserSkill> userSkills = userSkillRepository.findByUserIdWithSkill(userId);
+        return toProfileResponse(fullUser, profile, userSkills);
     }
 
     @Transactional

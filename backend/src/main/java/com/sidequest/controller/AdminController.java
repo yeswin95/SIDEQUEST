@@ -54,7 +54,14 @@ public class AdminController {
             try { jdbcTemplate.execute("ALTER TABLE users ADD CONSTRAINT users_username_not_empty CHECK (length(trim(username::text)) > 0)"); } catch (Exception ignored) {}
             jdbcTemplate.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (username)");
             jdbcTemplate.execute("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS rank_tier skill_rank_tier NOT NULL DEFAULT 'BRONZE'");
-            return ResponseEntity.ok(Map.of("status", "migrated", "message", "username + rank_tier migration applied"));
+            // vote system
+            jdbcTemplate.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vote_type') THEN CREATE TYPE vote_type AS ENUM ('UP', 'DOWN'); END IF; END $$;");
+            jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS project_votes (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, vote_type vote_type NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), CONSTRAINT project_votes_project_user_unique UNIQUE (project_id, user_id))");
+            jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_project_votes_project_id ON project_votes(project_id)");
+            jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_project_votes_user_id ON project_votes(user_id)");
+            // ensure IN_A_PARTY enum
+            jdbcTemplate.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'IN_A_PARTY' AND enumtypid = 'user_active_status'::regtype) THEN ALTER TYPE user_active_status ADD VALUE 'IN_A_PARTY'; END IF; END $$;");
+            return ResponseEntity.ok(Map.of("status", "migrated", "message", "username + rank_tier + vote + IN_A_PARTY migration applied"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }

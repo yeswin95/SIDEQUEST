@@ -13,7 +13,7 @@ import MetalPlayerCard, { PlayerCardConfig } from "@/components/MetalPlayerCard"
 import CardCustomizationModal from "@/components/CardCustomizationModal";
 import AccountDetails from "@/components/AccountDetails";
 import AuthModal from "@/components/AuthModal";
-import { getHighestTier, getTierTokens } from "@/lib/tierConfig";
+import { getHighestTier, getTierTokens, getLevelFromSkills } from "@/lib/tierConfig";
 
 // Kept for reference only - not used as default for authenticated users (fresh user = zeroed Bronze/0)
 // Previously: 6 hardcoded demo skills that leaked for new users.
@@ -116,10 +116,12 @@ export default function ProfilePage() {
             skills: mappedSkills,
           }));
 
-          const mappedStatus: ActiveStatus = res.activeStatus === "ACTIVE" 
-            ? "OPEN_TO_JOIN" 
-            : res.activeStatus === "INACTIVE" 
-            ? "OFFLINE" 
+          const mappedStatus: ActiveStatus = res.activeStatus === "IN_A_PARTY"
+            ? "IN_A_PARTY"
+            : res.activeStatus === "INACTIVE" || res.activeStatus === "OFFLINE"
+            ? "OFFLINE"
+            : res.activeStatus === "ACTIVE" || res.activeStatus === "OPEN_TO_JOIN"
+            ? "OPEN_TO_JOIN"
             : "OPEN_TO_JOIN";
           setActiveStatus(mappedStatus);
 
@@ -270,7 +272,7 @@ export default function ProfilePage() {
 
     if (getStoredToken()) {
       const yearOffset = Number(graduationYear) - 2024;
-      const statusMapping = activeStatus === "OPEN_TO_JOIN" ? "ACTIVE" : activeStatus === "OFFLINE" ? "INACTIVE" : "ACTIVE";
+      const statusMapping = activeStatus === "OPEN_TO_JOIN" ? "ACTIVE" : activeStatus === "OFFLINE" ? "INACTIVE" : "IN_A_PARTY";
 
       api.profiles.updateMe({
         fullName: displayName,
@@ -296,12 +298,29 @@ export default function ProfilePage() {
     localStorage.setItem("sidequest_card_config", JSON.stringify(newConfig));
   };
 
+  const persistActiveStatus = (newStatus: ActiveStatus) => {
+    setActiveStatus(newStatus);
+    setIsStatusDropdownOpen(false);
+    if (!getStoredToken()) return;
+    const statusMapping = newStatus === "OPEN_TO_JOIN" ? "ACTIVE" : newStatus === "OFFLINE" ? "INACTIVE" : "IN_A_PARTY";
+    const currentFullName = displayName || profile.fullName || "New Builder";
+    const currentMajor = academicMajor || profile.major || "Undeclared";
+    const currentGradYear = graduationYear || profile.gradYear || new Date().getFullYear() + 1;
+    const yearOffset = Number(currentGradYear) - 2024;
+    api.profiles.updateMe({
+      fullName: currentFullName,
+      collegeYear: yearOffset > 0 ? yearOffset : 3,
+      major: currentMajor,
+      activeStatus: statusMapping,
+    }).then(() => window.dispatchEvent(new CustomEvent("sidequest_auth_changed"))).catch(()=>{});
+  };
+
   const highestRank = getHighestTier(profile.skills.map((s) => s.rankTier));
   const highestTokens = getTierTokens(highestRank);
 
   // Fresh user detection - zeroed stats
   const isNewUser = isAuthed && profile.skills.length === 0;
-  const displayLevel = isNewUser ? 1 : 12;
+  const displayLevel = getLevelFromSkills(profile.skills.length);
   const displayQuestsCount = isNewUser ? 0 : 27;
   const displayAchievementsCount = isNewUser ? 0 : 0; // no unlocked for fresh user
   const displayBadgesCount = isNewUser ? 0 : 0;
@@ -426,10 +445,7 @@ export default function ProfilePage() {
                             <button
                               key={st}
                               type="button"
-                              onClick={() => {
-                                setActiveStatus(st);
-                                setIsStatusDropdownOpen(false);
-                              }}
+                              onClick={() => persistActiveStatus(st)}
                               className={`rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition-all flex items-center justify-between ${
                                 activeStatus === st
                                   ? "bg-[#3ecf8e]/10 text-[#3ecf8e] font-semibold"

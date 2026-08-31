@@ -10,6 +10,7 @@ import ApplyModal, { QuestForApply } from "@/components/ApplyModal";
 import AuthModal from "@/components/AuthModal";
 import { api } from "@/lib/api";
 import Link from "next/link";
+import PublicProfileModal from "@/components/PublicProfileModal";
 import {
   Search,
   Plus,
@@ -44,6 +45,8 @@ interface QuestPost {
   roles: PartyRole[];
   repoLink?: string;
   upvotes?: number;
+  downvotes?: number;
+  userVote?: "UP" | "DOWN" | null;
   commentsCount?: number;
 }
 
@@ -69,6 +72,7 @@ export default function HomePage() {
   const [applyQuest, setApplyQuest] = useState<QuestForApply | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalRedirectTo, setAuthModalRedirectTo] = useState<string | undefined>(undefined);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -126,8 +130,10 @@ export default function HomePage() {
             filled: r.filledSpots || 0,
             total: r.spotCount || 1,
           })),
-          // Task 4: no hardcoded fallback — use real backend data or 0
-          upvotes: typeof item.upvotes === "number" ? item.upvotes : typeof item.votes === "number" ? item.votes : 0,
+          // Task 4 & 5: use real backend vote data or 0
+          upvotes: typeof item.upvotes === "number" ? item.upvotes : 0,
+          downvotes: typeof item.downvotes === "number" ? item.downvotes : 0,
+          userVote: item.userVote === "UP" ? "UP" : item.userVote === "DOWN" ? "DOWN" : null,
           commentsCount: typeof item.commentsCount === "number" ? item.commentsCount : typeof item.comments === "number" ? item.comments : 0,
         } as QuestPost & { ownerEmail?: string | null }));
         setPosts(mapped as QuestPost[]);
@@ -354,6 +360,7 @@ export default function HomePage() {
                       title={post.title}
                       description={post.description}
                       ownerName={post.ownerName}
+                      ownerId={post.ownerId}
                       ownerAvatarUrl={post.ownerAvatarUrl}
                       ownerRole={post.ownerRole}
                       guildTag={post.guildTag}
@@ -362,9 +369,12 @@ export default function HomePage() {
                       roles={post.roles}
                       repoLink={post.repoLink}
                       initialUpvotes={post.upvotes}
+                      initialDownvotes={post.downvotes}
+                      initialUserVote={post.userVote}
                       commentsCount={post.commentsCount}
                       joinLabel={owned ? "View Applications" : "Apply to Join"}
                       onJoin={() => owned ? handleViewApplications(post) : handleApplyClick(post)}
+                      onProfileClick={(ownerId) => setSelectedAuthorId(ownerId)}
                       isAuthenticated={typeof window !== "undefined" && !!localStorage.getItem("sidequest_jwt_token")}
                       onRequireAuth={() => {
                         setAuthModalRedirectTo(getCurrentUrl());
@@ -466,6 +476,8 @@ export default function HomePage() {
         onClose={() => setApplyQuest(null)}
         onSuccess={fetchPosts}
       />
+
+      <PublicProfileModal userId={selectedAuthorId} onClose={() => setSelectedAuthorId(null)} />
     </div>
   );
 }

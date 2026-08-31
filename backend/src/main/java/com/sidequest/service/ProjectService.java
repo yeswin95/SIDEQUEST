@@ -17,8 +17,10 @@ import com.sidequest.entity.UserSkill;
 import com.sidequest.enums.ApplicationStatus;
 import com.sidequest.enums.ProjectStatus;
 import com.sidequest.exception.ResourceNotFoundException;
+import com.sidequest.enums.VoteType;
 import com.sidequest.repository.ProjectApplicationRepository;
 import com.sidequest.repository.ProjectRepository;
+import com.sidequest.repository.ProjectVoteRepository;
 import com.sidequest.repository.SkillRepository;
 import com.sidequest.repository.UserSkillRepository;
 import com.sidequest.security.CurrentUserService;
@@ -42,6 +44,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectApplicationRepository projectApplicationRepository;
+    private final ProjectVoteRepository projectVoteRepository;
     private final SkillRepository skillRepository;
     private final UserSkillRepository userSkillRepository;
     private final CurrentUserService currentUserService;
@@ -187,6 +190,17 @@ public class ProjectService {
                 .major(owner.getProfile() != null ? owner.getProfile().getMajor() : null)
                 .build();
 
+        long upvotes = projectVoteRepository.countByProjectIdAndVoteType(project.getId(), VoteType.UP);
+        long downvotes = projectVoteRepository.countByProjectIdAndVoteType(project.getId(), VoteType.DOWN);
+        VoteType userVote = null;
+        try {
+            var current = currentUserService.getCurrentUserOptional();
+            if (current.isPresent()) {
+                userVote = projectVoteRepository.findByProjectIdAndUserId(project.getId(), current.get().getId())
+                        .map(v -> v.getVoteType()).orElse(null);
+            }
+        } catch (Exception ignored) {}
+
         return ProjectResponseDTO.builder()
                 .id(project.getId())
                 .title(project.getTitle())
@@ -199,6 +213,9 @@ public class ProjectService {
                 .totalSpots(totalSpots)
                 .filledSpots(totalFilled)
                 .openSpots(totalOpen)
+                .upvotes(upvotes)
+                .downvotes(downvotes)
+                .userVote(userVote)
                 .createdAt(project.getCreatedAt())
                 .updatedAt(project.getUpdatedAt())
                 .build();

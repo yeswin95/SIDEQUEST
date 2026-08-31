@@ -94,3 +94,9 @@ export function getRankProgress(completedCount: number): { currentRank: SkillRan
   const progress = nextRank ? Math.min(100, Math.round(((completedCount - prevThreshold) / (required - prevThreshold)) * 100)) : 100;
   return { currentRank, nextRank, progress, required };
 }
+
+export function getLevelFromSkills(completedCount: number): number {
+  // Level 1 for 0 skills, +1 per skill unlocked (so 15 skills = level 16 max for DIAMOND)
+  // Keeps sync with rank thresholds: 0->1, 3->4, 6->7, 10->11, 15->16
+  return Math.max(1, completedCount + 1);
+}
