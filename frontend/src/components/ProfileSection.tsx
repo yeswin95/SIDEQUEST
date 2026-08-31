@@ -21,7 +21,6 @@ interface ProfileSectionProps {
   userProfile?: {
     fullName: string;
     major: string;
-    gradYear: number;
     activeStatus: ActiveStatus;
     bio?: string;
     skills: PlayerSkill[];
@@ -52,7 +51,6 @@ export default function ProfileSection({
   userProfile = {
     fullName: "Alex Rivera",
     major: "Computer Science",
-    gradYear: 2027,
     activeStatus: "OPEN_TO_JOIN",
     bio: "Full stack builder passionate about distributed systems and interactive web apps. Seeking hackathon teammates!",
     skills: defaultSkills,
@@ -107,7 +105,6 @@ export default function ProfileSection({
           <PlayerProfileCard
             fullName={userProfile.fullName}
             major={userProfile.major}
-            gradYear={userProfile.gradYear}
             activeStatus={status}
             skills={userProfile.skills}
             bio={userProfile.bio}

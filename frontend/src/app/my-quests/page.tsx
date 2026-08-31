@@ -16,7 +16,7 @@ import { getHighestTier, getLevelFromSkills } from "@/lib/tierConfig";
 import { api } from "@/lib/api";
 
 type AppStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "COMPLETED";
-type Application = { id: string; projectId: string; projectTitle: string; roleTitle: string; applicationStatus: AppStatus; appliedAt?: string; applicant?: { userId?: string; fullName?: string; major?: string; email?: string; collegeYear?: number; skills?: Array<{ skillName?: string; rankTier?: string; category?: string; id?: string }> } };
+type Application = { id: string; projectId: string; projectTitle: string; roleTitle: string; applicationStatus: AppStatus; appliedAt?: string; applicant?: { userId?: string; fullName?: string; major?: string; email?: string; skills?: Array<{ skillName?: string; rankTier?: string; category?: string; id?: string }> } };
 type Quest = { id: string; title: string; description?: string; status: "OPEN" | "IN_PROGRESS" | "COMPLETED"; createdAt?: string; owner?: { id?: string }; roles?: unknown[] };
 const statusStyle: Record<AppStatus, string> = { PENDING: "bg-amber-400/15 text-amber-700 dark:text-amber-300", ACCEPTED: "bg-[#3ecf8e]/15 text-[#21875c] dark:text-[#3ecf8e]", REJECTED: "bg-rose-500/15 text-rose-700 dark:text-rose-300", COMPLETED: "bg-purple-500/15 text-purple-700 dark:text-purple-300" };
 const statusIcon: Record<AppStatus, any> = { PENDING: Clock, ACCEPTED: CheckCircle2, REJECTED: XCircle, COMPLETED: CheckCircle2 };
@@ -70,7 +70,7 @@ export default function MyQuestsPage() {
       setError("Quest management is unavailable until you sign in to the SideQuest backend.");
     } finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); const h = () => load(); window.addEventListener('sidequest_auth_changed', h); window.addEventListener('storage', h); return () => { window.removeEventListener('sidequest_auth_changed', h); window.removeEventListener('storage', h); }; }, []);
   // Task 3: Direct navigation from feed's View Applications button
   useEffect(() => {
     if (loading || posted.length === 0) return;
@@ -165,7 +165,7 @@ export default function MyQuestsPage() {
               </div>
             </header>
             {error && <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">{error}</p>}
-            {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-[#3ecf8e]" /></div> : tab === "posted" ? (
+            {loading ? <div className="space-y-3">{[1,2,3].map(i => (<div key={i} className="animate-pulse rounded-xl border border-slate-200 bg-white p-5 dark:border-[#282828] dark:bg-[#1c1c1c]"><div className="h-4 w-1/2 rounded bg-slate-200 dark:bg-[#2a2a2a]" /><div className="mt-2 h-3 w-full rounded bg-slate-100 dark:bg-[#232323]" /><div className="mt-3 h-8 w-24 rounded bg-slate-100 dark:bg-[#232323]" /></div>))}</div> : tab === "posted" ? (
               <div className="space-y-3">{posted.length ? posted.map((quest) => (
                 <article key={quest.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#282828] dark:bg-[#1c1c1c]">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -242,7 +242,6 @@ function ApplicantProfileModal({ application, onClose }: { application: Applicat
   const highest = getHighestTier(skills.map(s => s.rankTier as any));
   const fullName = freshProfile?.fullName || application.applicant?.fullName || application.applicant?.email || "Applicant";
   const major = freshProfile?.major || application.applicant?.major || "Campus Builder";
-  const gradYear = freshProfile?.collegeYear ? 2024 + freshProfile.collegeYear : (application.applicant?.collegeYear ? 2024 + application.applicant.collegeYear : 2027);
   const activeStatus = freshProfile?.activeStatus === "IN_A_PARTY" ? "IN_A_PARTY" : freshProfile?.activeStatus === "INACTIVE" ? "OFFLINE" : "OPEN_TO_JOIN";
   const rankTier = (freshProfile?.rankTier as any) || highest;
   const isNew = skills.length === 0;
@@ -250,16 +249,17 @@ function ApplicantProfileModal({ application, onClose }: { application: Applicat
   const badges = isNew ? mockCampusBadges.map(b => ({ ...b, status: "locked" as const, progress: 0, currentValue: 0 })) : mockCampusBadges;
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[#f8fafc] dark:bg-[#121212] p-6 shadow-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900 dark:text-[#ededed]">Applicant Full Profile</h3>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-[#282828]"><X className="h-5 w-5" /></button>
+      <div onClick={(e) => e.stopPropagation()} className="relative max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-[#f8fafc] dark:bg-[#121212] shadow-2xl flex flex-col">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-[#f8fafc] dark:border-[#282828] dark:bg-[#121212] px-6 py-4">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-[#ededed]">Applicant Full Profile</h3>
+          <button type="button" onClick={onClose} className="rounded-full bg-white p-2 text-slate-500 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900 dark:bg-[#1c1c1c] dark:text-zinc-400 dark:ring-[#282828] dark:hover:bg-[#232323] dark:hover:text-zinc-100" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
+        <div className="p-6">
         <div className="space-y-6">
           <div className="flex justify-center">
             <MetalPlayerCard config={{ tier: rankTier, backgroundType: "default", pattern: "circuit", showAvatar: true, showUsername: true, showLevel: true, showTier: true, showMainSkill: true, showQuestCount: true, showAchievementCount: true, showCampusBadgeCount: true, showGithub: true, customTitle: major }} userData={{ fullName, level, skillsCount: skills.length, questsCount: isNew ? 0 : 5, achievementsCount: achievements.filter(b=>b.status==="earned").length, badgesCount: badges.filter(b=>b.status==="earned").length, mainSkill: skills[0]?.skillName }} />
           </div>
-          <PlayerProfileCard fullName={fullName} major={major} gradYear={gradYear} activeStatus={activeStatus as any} skills={skills} bio={`Applied for ${application.roleTitle} on ${application.projectTitle} — ${skills.length} skills unlocked`} />
+          <PlayerProfileCard fullName={fullName} major={major} activeStatus={activeStatus as any} skills={skills} bio={`Applied for ${application.roleTitle} on ${application.projectTitle} — ${skills.length} skills unlocked`} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-[#282828] dark:bg-[#1c1c1c]">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 mb-3">Achievements</h4>
@@ -271,6 +271,7 @@ function ApplicantProfileModal({ application, onClose }: { application: Applicat
             </section>
           </div>
           <button type="button" onClick={onClose} className="w-full rounded-lg bg-[#3ecf8e] py-2.5 text-xs font-bold text-[#042f1a] hover:bg-[#34b27b]">Close</button>
+        </div>
         </div>
       </div>
     </div>

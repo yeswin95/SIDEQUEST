@@ -59,6 +59,10 @@ public class AdminController {
             jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS project_votes (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, vote_type vote_type NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), CONSTRAINT project_votes_project_user_unique UNIQUE (project_id, user_id))");
             jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_project_votes_project_id ON project_votes(project_id)");
             jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_project_votes_user_id ON project_votes(user_id)");
+            // Cleanup deprecated college_year
+            try { jdbcTemplate.execute("DROP INDEX IF EXISTS idx_user_profiles_college_year"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("ALTER TABLE user_profiles DROP CONSTRAINT IF EXISTS user_profiles_college_year_valid"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("ALTER TABLE user_profiles DROP COLUMN IF EXISTS college_year"); } catch (Exception ignored) {}
             // ensure IN_A_PARTY enum
             jdbcTemplate.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'IN_A_PARTY' AND enumtypid = 'user_active_status'::regtype) THEN ALTER TYPE user_active_status ADD VALUE 'IN_A_PARTY'; END IF; END $$;");
             return ResponseEntity.ok(Map.of("status", "migrated", "message", "username + rank_tier + vote + IN_A_PARTY migration applied"));

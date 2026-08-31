@@ -54,7 +54,6 @@ public class ProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         profile.setFullName(request.getFullName().trim());
-        profile.setCollegeYear(request.getCollegeYear());
         profile.setMajor(request.getMajor().trim());
         profile.setActiveStatus(request.getActiveStatus());
 
@@ -77,7 +76,6 @@ public class ProfileService {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .fullName(profile.getFullName())
-                .collegeYear(profile.getCollegeYear())
                 .major(profile.getMajor())
                 .activeStatus(profile.getActiveStatus())
                 .rankTier(profile.getRankTier() != null ? profile.getRankTier() : computedRank)

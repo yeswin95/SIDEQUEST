@@ -59,8 +59,14 @@ type SortOption = "best" | "latest" | "top" | "open";
 
 export default function HomePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [posts, setPosts] = useState<QuestPost[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [posts, setPosts] = useState<QuestPost[]>(() => {
+    // Hydrate from session cache for instant render
+    try {
+      const cached = typeof window !== 'undefined' ? sessionStorage.getItem('sidequest_feed_cache') : null;
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState("All Feed");
   const [sortBy, setSortBy] = useState<SortOption>("best");
@@ -137,6 +143,7 @@ export default function HomePage() {
           commentsCount: typeof item.commentsCount === "number" ? item.commentsCount : typeof item.comments === "number" ? item.comments : 0,
         } as QuestPost & { ownerEmail?: string | null }));
         setPosts(mapped as QuestPost[]);
+        try { sessionStorage.setItem('sidequest_feed_cache', JSON.stringify(mapped)); } catch {}
       } else {
         // Fresh DB: no fallback to dummy — show empty feed
         setPosts([]);
@@ -150,6 +157,10 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchPosts();
+    const handleAuth = () => fetchPosts();
+    window.addEventListener('sidequest_auth_changed', handleAuth);
+    window.addEventListener('storage', handleAuth);
+    return () => { window.removeEventListener('sidequest_auth_changed', handleAuth); window.removeEventListener('storage', handleAuth); };
   }, []);
 
   useEffect(() => {
@@ -327,9 +338,15 @@ export default function HomePage() {
               {/* Scrollable Feed List */}
               <div className="space-y-4">
                 {loading ? (
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white py-16 text-slate-400 dark:border-[#282828] dark:bg-[#1c1c1c]">
-                    <RefreshCw className="h-6 w-6 animate-spin text-[#3ecf8e] mb-2" />
-                    <span className="text-xs">Scanning quest feed...</span>
+                  <div className="space-y-4">
+                    {[1,2,3].map((i) => (
+                      <div key={i} className="animate-pulse rounded-xl border border-slate-200 bg-white p-5 dark:border-[#282828] dark:bg-[#1c1c1c]">
+                        <div className="flex items-center gap-3"><div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-[#2a2a2a]" /><div className="space-y-2 flex-1"><div className="h-3 w-1/3 rounded bg-slate-200 dark:bg-[#2a2a2a]" /><div className="h-2 w-1/4 rounded bg-slate-100 dark:bg-[#232323]" /></div></div>
+                        <div className="mt-4 h-4 w-3/4 rounded bg-slate-200 dark:bg-[#2a2a2a]" />
+                        <div className="mt-2 h-3 w-full rounded bg-slate-100 dark:bg-[#232323]" />
+                        <div className="mt-2 h-3 w-5/6 rounded bg-slate-100 dark:bg-[#232323]" />
+                      </div>
+                    ))}
                   </div>
                 ) : filteredPosts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white py-16 text-center dark:border-[#282828] dark:bg-[#1c1c1c]">

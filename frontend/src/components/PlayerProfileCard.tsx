@@ -16,7 +16,6 @@ export type ActiveStatus = "OPEN_TO_JOIN" | "IN_A_PARTY" | "OFFLINE";
 export interface PlayerProfileCardProps {
   fullName: string;
   major: string;
-  gradYear: number;
   activeStatus: ActiveStatus;
   skills: PlayerSkill[];
   bio?: string;
@@ -58,7 +57,6 @@ function initials(name: string): string {
 export default function PlayerProfileCard({
   fullName,
   major,
-  gradYear,
   activeStatus,
   skills,
   bio,
@@ -113,7 +111,7 @@ export default function PlayerProfileCard({
               </span>
             </div>
             <p className="truncate text-xs text-slate-500 dark:text-zinc-400">
-              {major} &middot; Class of {gradYear}
+              {major}
             </p>
           </div>
         </div>

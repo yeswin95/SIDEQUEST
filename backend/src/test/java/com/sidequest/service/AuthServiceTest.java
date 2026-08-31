@@ -45,7 +45,6 @@ class AuthServiceTest {
                 .email("student@university.edu")
                 .password("securePassword123")
                 .fullName("Alex Rivera")
-                .collegeYear((short) 2)
                 .major("Computer Science")
                 .build();
     }

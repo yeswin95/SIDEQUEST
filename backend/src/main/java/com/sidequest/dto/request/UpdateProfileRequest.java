@@ -1,8 +1,6 @@
 package com.sidequest.dto.request;
 
 import com.sidequest.enums.UserActiveStatus;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -22,11 +20,6 @@ public class UpdateProfileRequest {
     @NotBlank
     @Size(max = 255)
     private String fullName;
-
-    @NotNull
-    @Min(1)
-    @Max(8)
-    private Short collegeYear;
 
     @NotBlank
     @Size(max = 255)

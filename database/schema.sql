@@ -83,7 +83,6 @@ CREATE TABLE user_profiles (
                                         REFERENCES users (id)
                                         ON DELETE CASCADE,
     full_name       TEXT                NOT NULL,
-    college_year    SMALLINT            NOT NULL,
     major           TEXT                NOT NULL,
     active_status   user_active_status  NOT NULL DEFAULT 'ACTIVE',
     rank_tier       skill_rank_tier     NOT NULL DEFAULT 'BRONZE',
@@ -92,14 +91,11 @@ CREATE TABLE user_profiles (
 
     CONSTRAINT user_profiles_full_name_not_empty
         CHECK (length(trim(full_name)) > 0),
-    CONSTRAINT user_profiles_college_year_valid
-        CHECK (college_year BETWEEN 1 AND 8),
     CONSTRAINT user_profiles_major_not_empty
         CHECK (length(trim(major)) > 0)
 );
 
 CREATE INDEX idx_user_profiles_active_status ON user_profiles (active_status);
-CREATE INDEX idx_user_profiles_college_year ON user_profiles (college_year);
 CREATE INDEX idx_user_profiles_major ON user_profiles (major);
 
 -- ---------------------------------------------------------------------------

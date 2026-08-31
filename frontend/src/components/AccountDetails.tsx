@@ -8,7 +8,6 @@ interface AccountDetailsProps {
     username: string;
     email: string;
     major: string;
-    gradYear: number;
     role: string;
     level: number;
     tier: string;
@@ -54,7 +53,7 @@ export default function AccountDetails({ userData }: AccountDetailsProps) {
           <div className="min-w-0">
             <span className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">Academic Focus</span>
             <span className="font-semibold text-slate-800 dark:text-zinc-200 truncate block">
-              {userData.major} &middot; Class of {userData.gradYear}
+              {userData.major}
             </span>
           </div>
         </div>

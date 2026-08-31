@@ -191,7 +191,6 @@ public class ProjectApplicationService {
                 .userId(applicant.getId())
                 .email(applicant.getEmail())
                 .fullName(profile != null ? profile.getFullName() : applicant.getEmail())
-                .collegeYear(profile != null ? profile.getCollegeYear() : null)
                 .major(profile != null ? profile.getMajor() : null)
                 .activeStatus(profile != null ? profile.getActiveStatus() : UserActiveStatus.ACTIVE)
                 .skills(skillDTOs)

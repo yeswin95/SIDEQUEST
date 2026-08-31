@@ -21,7 +21,6 @@ public class TeamMemberDTO {
     private UUID userId;
     private String fullName;
     private String email;
-    private Short collegeYear;
     private String major;
     private UUID roleId;
     private String roleTitle;

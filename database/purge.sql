@@ -42,5 +42,5 @@ COMMIT;
 --    guarantees no two users can ever share the same username (case-insensitive).
 --    AuthService.register validates via existsByUsernameIgnoreCase and DB unique
 --    index idx_users_username raises 409 on race.
--- 2. Create a fresh user via POST /api/v1/auth/register with {username, email, password, fullName, major, collegeYear}
+-- 2. Create a fresh user via POST /api/v1/auth/register with {username, email, password, fullName, major}
 --    The user will start at BRONZE rank with 0 skills and "Not Connected" handles.

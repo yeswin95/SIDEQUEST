@@ -48,9 +48,6 @@ public class AuthService {
         if (request.getMajor() == null || request.getMajor().trim().isEmpty()) {
             throw new IllegalArgumentException("Major is required");
         }
-        if (request.getCollegeYear() == null) {
-            throw new IllegalArgumentException("College year is required");
-        }
 
         String rawUsername = request.getUsername().trim();
         // Sanitize: auto-lowercase and ensure allowed chars only
@@ -59,7 +56,7 @@ public class AuthService {
             throw new IllegalArgumentException("Username can only contain lowercase letters, numbers, underscores and dots");
         }
         String email = request.getEmail().trim().toLowerCase();
-        log.info("Register attempt for username={} email={} fullName={} major={} collegeYear={}", username, email, request.getFullName(), request.getMajor(), request.getCollegeYear());
+        log.info("Register attempt for username={} email={} fullName={} major={}", username, email, request.getFullName(), request.getMajor());
 
         if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new IllegalArgumentException("Username exists, try something different");
@@ -78,8 +75,6 @@ public class AuthService {
             Profile profile = Profile.builder()
                     .user(user)
                     .fullName(request.getFullName().trim())
-                    // Ensure DB constraints: college_year 1-8, major not empty, fullName not empty
-                    .collegeYear(request.getCollegeYear())
                     .major(request.getMajor().trim())
                     .activeStatus(UserActiveStatus.ACTIVE)
                     .build();

@@ -113,6 +113,7 @@ export default function QuestCard({
   const displayScore = upvotes - downvotes;
   const [bookmarked, setBookmarked] = useState(() => isSaved ?? getSavedQuestIds().includes(id));
   const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setUpvotes(initialUpvotes ?? 0);
@@ -246,14 +247,19 @@ export default function QuestCard({
         </button>
       </div>
 
-      {/* Quest Title & Description */}
+      {/* Quest Title & Description — clamped to 3 lines with See More toggle */}
       <div className="mt-3">
         <h2 className="text-base font-semibold text-slate-900 transition-colors group-hover:text-[#3ecf8e] dark:text-[#ededed] dark:group-hover:text-[#3ecf8e]">
           {title}
         </h2>
-        <p className="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
+        <p className={`mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-zinc-400 ${expanded ? "" : "line-clamp-3"}`}>
           {description}
         </p>
+        {description && description.length > 120 && (
+          <button type="button" onClick={() => setExpanded(!expanded)} className="mt-1 text-[11px] font-semibold text-[#3ecf8e] hover:text-[#34b27b] hover:underline">
+            {expanded ? "See Less" : "See More"}
+          </button>
+        )}
       </div>
 
       {/* Required Skills Tags */}

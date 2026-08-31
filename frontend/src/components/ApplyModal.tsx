@@ -45,12 +45,10 @@ export default function ApplyModal({
   const [applicantProfile, setApplicantProfile] = useState<{
     fullName: string;
     major: string;
-    gradYear: number;
     skills: PlayerSkill[];
   }>({
     fullName: "",
     major: "",
-    gradYear: new Date().getFullYear() + 1,
     skills: mockApplicantSkills,
   });
 
@@ -70,15 +68,14 @@ export default function ApplyModal({
             setApplicantProfile({
               fullName: res.fullName || res.email || "",
               major: res.major || "",
-              gradYear: res.collegeYear ? 2024 + res.collegeYear : new Date().getFullYear() + 1,
               skills: res.skills && res.skills.length > 0 ? res.skills : [],
             });
           } else {
-            setApplicantProfile({ fullName: "", major: "", gradYear: new Date().getFullYear() + 1, skills: [] });
+            setApplicantProfile({ fullName: "", major: "", skills: [] });
           }
         })
         .catch(() => {
-          setApplicantProfile({ fullName: "", major: "", gradYear: new Date().getFullYear() + 1, skills: [] });
+          setApplicantProfile({ fullName: "", major: "", skills: [] });
         });
     }
   }, [isOpen]);
@@ -218,7 +215,6 @@ export default function ApplyModal({
             <PlayerProfileCard
               fullName={applicantProfile.fullName}
               major={applicantProfile.major}
-              gradYear={applicantProfile.gradYear}
               activeStatus="OPEN_TO_JOIN"
               skills={applicantProfile.skills}
             />

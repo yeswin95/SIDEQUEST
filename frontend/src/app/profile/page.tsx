@@ -30,7 +30,6 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState({
     fullName: "",
     major: "",
-    gradYear: new Date().getFullYear() + 1,
     bio: "",
     skills: initialSkills as PlayerSkill[],
   });
@@ -40,7 +39,6 @@ export default function ProfilePage() {
   const [userHandle, setUserHandle] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
   const [academicMajor, setAcademicMajor] = useState("");
-  const [graduationYear, setGraduationYear] = useState<number>(new Date().getFullYear() + 1);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Avatar upload
@@ -96,7 +94,6 @@ export default function ProfilePage() {
         if (res) {
           const mappedName = res.fullName || "";
           const mappedMajor = res.major || "";
-          const mappedYear = res.collegeYear ? 2024 + res.collegeYear : new Date().getFullYear() + 1;
           // Fresh user: no skills -> empty array, not mock fallback
           const mappedSkills = res.skills && res.skills.length > 0 
             ? res.skills.map((s: any) => ({
@@ -112,7 +109,6 @@ export default function ProfilePage() {
             ...prev,
             fullName: mappedName,
             major: mappedMajor,
-            gradYear: mappedYear,
             skills: mappedSkills,
           }));
 
@@ -129,7 +125,6 @@ export default function ProfilePage() {
           if (!localStorage.getItem("sidequest_username") && mappedName) setDisplayName(mappedName);
           else if (localStorage.getItem("sidequest_username")) setDisplayName(localStorage.getItem("sidequest_username") || mappedName);
           if (!localStorage.getItem("sidequest_major") && mappedMajor) setAcademicMajor(mappedMajor);
-          if (!localStorage.getItem("sidequest_grad_year")) setGraduationYear(mappedYear);
           if (localStorage.getItem("sidequest_email")) setEmailAddress(localStorage.getItem("sidequest_email") || res.email || "");
           else if (res.email) setEmailAddress(res.email);
           if (localStorage.getItem("sidequest_user_handle")) setUserHandle(localStorage.getItem("sidequest_user_handle") || "");
@@ -149,7 +144,6 @@ export default function ProfilePage() {
         setUserHandle("");
         setEmailAddress("");
         setAcademicMajor("");
-        setGraduationYear(new Date().getFullYear() + 1);
         return;
       }
       const storedAvatar = localStorage.getItem("sidequest_avatar");
@@ -178,13 +172,6 @@ export default function ProfilePage() {
         setAcademicMajor(storedMajor);
         setProfile((prev) => ({ ...prev, major: storedMajor }));
       }
-
-      const storedGradYear = localStorage.getItem("sidequest_grad_year");
-      if (storedGradYear) {
-        setGraduationYear(Number(storedGradYear));
-        setProfile((prev) => ({ ...prev, gradYear: Number(storedGradYear) }));
-      }
-
       const storedConfig = localStorage.getItem("sidequest_card_config");
       if (storedConfig) {
         try {
@@ -258,7 +245,6 @@ export default function ProfilePage() {
     localStorage.setItem("sidequest_user_handle", userHandle);
     localStorage.setItem("sidequest_email", emailAddress);
     localStorage.setItem("sidequest_major", academicMajor);
-    localStorage.setItem("sidequest_grad_year", String(graduationYear));
     localStorage.setItem("sidequest_bio", trimmedBio);
 
     setBio(trimmedBio);
@@ -266,17 +252,14 @@ export default function ProfilePage() {
       ...prev,
       fullName: displayName,
       major: academicMajor,
-      gradYear: Number(graduationYear),
       bio: trimmedBio,
     }));
 
     if (getStoredToken()) {
-      const yearOffset = Number(graduationYear) - 2024;
       const statusMapping = activeStatus === "OPEN_TO_JOIN" ? "ACTIVE" : activeStatus === "OFFLINE" ? "INACTIVE" : "IN_A_PARTY";
 
       api.profiles.updateMe({
         fullName: displayName,
-        collegeYear: yearOffset > 0 ? yearOffset : 3,
         major: academicMajor,
         activeStatus: statusMapping,
       })
@@ -305,11 +288,8 @@ export default function ProfilePage() {
     const statusMapping = newStatus === "OPEN_TO_JOIN" ? "ACTIVE" : newStatus === "OFFLINE" ? "INACTIVE" : "IN_A_PARTY";
     const currentFullName = displayName || profile.fullName || "New Builder";
     const currentMajor = academicMajor || profile.major || "Undeclared";
-    const currentGradYear = graduationYear || profile.gradYear || new Date().getFullYear() + 1;
-    const yearOffset = Number(currentGradYear) - 2024;
     api.profiles.updateMe({
       fullName: currentFullName,
-      collegeYear: yearOffset > 0 ? yearOffset : 3,
       major: currentMajor,
       activeStatus: statusMapping,
     }).then(() => window.dispatchEvent(new CustomEvent("sidequest_auth_changed"))).catch(()=>{});
@@ -526,57 +506,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-[#3ecf8e] dark:border-[#282828] dark:bg-[#1c1c1c] dark:text-zinc-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Username Handle</label>
-                    <input
-                      type="text"
-                      value={userHandle}
-                      onChange={(e) => setUserHandle(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-[#3ecf8e] dark:border-[#282828] dark:bg-[#1c1c1c] dark:text-zinc-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      value={emailAddress}
-                      onChange={(e) => setEmailAddress(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-[#3ecf8e] dark:border-[#282828] dark:bg-[#1c1c1c] dark:text-zinc-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Academic Focus / Major</label>
-                    <input
-                      type="text"
-                      value={academicMajor}
-                      onChange={(e) => setAcademicMajor(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-[#3ecf8e] dark:border-[#282828] dark:bg-[#1c1c1c] dark:text-zinc-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Graduation Year</label>
-                    <input
-                      type="number"
-                      value={graduationYear}
-                      onChange={(e) => setGraduationYear(Number(e.target.value))}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-[#3ecf8e] dark:border-[#282828] dark:bg-[#1c1c1c] dark:text-zinc-100"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
+<div className="sm:col-span-2">
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Bio / About</label>
                     <textarea
                       aria-label="Bio / About"
@@ -652,7 +582,6 @@ export default function ProfilePage() {
                 <PlayerProfileCard
                   fullName={profile.fullName}
                   major={profile.major}
-                  gradYear={profile.gradYear}
                   activeStatus={activeStatus}
                   skills={profile.skills}
                   bio={profile.bio}
@@ -735,7 +664,6 @@ export default function ProfilePage() {
                     username: userHandle || "—",
                     email: emailAddress || "—",
                     major: profile.major || academicMajor || "—",
-                    gradYear: profile.gradYear || graduationYear,
                     role: "Student Builder",
                     level: displayLevel,
                     tier: highestRank,

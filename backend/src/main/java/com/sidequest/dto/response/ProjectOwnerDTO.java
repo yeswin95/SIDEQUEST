@@ -18,6 +18,5 @@ public class ProjectOwnerDTO {
     private UUID id;
     private String email;
     private String fullName;
-    private Short collegeYear;
     private String major;
 }

@@ -65,7 +65,6 @@ export default function ProfileMenu({ onClose, onCustomizeCard }: ProfileMenuPro
     localStorage.removeItem("sidequest_user_handle");
     localStorage.removeItem("sidequest_email");
     localStorage.removeItem("sidequest_major");
-    localStorage.removeItem("sidequest_grad_year");
     localStorage.removeItem("sidequest_avatar");
     localStorage.removeItem("sidequest_card_config");
     window.location.reload();

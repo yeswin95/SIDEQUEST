@@ -21,7 +21,6 @@ public class ApplicantProfileDTO {
     private UUID userId;
     private String email;
     private String fullName;
-    private Short collegeYear;
     private String major;
     private UserActiveStatus activeStatus;
     @Builder.Default

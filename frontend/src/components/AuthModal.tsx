@@ -29,7 +29,6 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [major, setMajor] = useState("");
-  const [collegeYear, setCollegeYear] = useState<number>(3); // Default Junior (3)
 
   const passwordsMismatch = activeTab === "signup" && confirmPassword.length > 0 && password !== confirmPassword;
 
@@ -149,7 +148,6 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
           password,
           fullName: fullName.trim(),
           major: major.trim(),
-          collegeYear,
         });
         if (res && res.accessToken) {
           setStoredToken(res.accessToken);
@@ -157,7 +155,6 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
           localStorage.setItem("sidequest_user_handle", res.username || username.trim());
           localStorage.setItem("sidequest_email", res.email);
           localStorage.setItem("sidequest_major", major.trim());
-          localStorage.setItem("sidequest_grad_year", String(2024 + collegeYear));
           // Fresh user: zeroed-out dashboard - clear any previous user's local state
           // Set connected handles to "Not Connected" by default
           try {
@@ -175,6 +172,7 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
             ]));
           } catch {}
 
+          try { await api.profiles.getMe(); } catch {}
           // Trigger global auth refresh
           window.dispatchEvent(new CustomEvent("sidequest_auth_changed"));
           window.dispatchEvent(new CustomEvent("sidequest_avatar_changed"));
@@ -337,27 +335,7 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
                 </div>
               </div>
 
-              {/* College Year */}
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1 block">
-                  College Year
-                </label>
-                <div className="relative">
-                  <GraduationCap className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-zinc-500" />
-                  <select
-                    value={collegeYear}
-                    onChange={(e) => setCollegeYear(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-900 focus:border-[#3ecf8e] focus:bg-white focus:outline-none dark:border-[#282828] dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors appearance-none"
-                  >
-                    <option value={1}>Freshman (Year 1)</option>
-                    <option value={2}>Sophomore (Year 2)</option>
-                    <option value={3}>Junior (Year 3)</option>
-                    <option value={4}>Senior (Year 4)</option>
-                    <option value={5}>Grad Student (Year 5)</option>
-                  </select>
-                </div>
-              </div>
-            </>
+</>
           )}
 
           {/* Email */}

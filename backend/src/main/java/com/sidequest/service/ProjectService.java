@@ -168,7 +168,6 @@ public class ProjectService {
                     .userId(applicant.getId())
                     .email(applicant.getEmail())
                     .fullName(applicant.getProfile() != null ? applicant.getProfile().getFullName() : applicant.getEmail())
-                    .collegeYear(applicant.getProfile() != null ? applicant.getProfile().getCollegeYear() : null)
                     .major(applicant.getProfile() != null ? applicant.getProfile().getMajor() : null)
                     .roleId(app.getProjectRole().getId())
                     .roleTitle(app.getProjectRole().getRoleTitle())
@@ -186,7 +185,6 @@ public class ProjectService {
                 .id(owner.getId())
                 .email(owner.getEmail())
                 .fullName(owner.getProfile() != null ? owner.getProfile().getFullName() : owner.getEmail())
-                .collegeYear(owner.getProfile() != null ? owner.getProfile().getCollegeYear() : null)
                 .major(owner.getProfile() != null ? owner.getProfile().getMajor() : null)
                 .build();
 

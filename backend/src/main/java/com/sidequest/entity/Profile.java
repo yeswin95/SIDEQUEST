@@ -46,9 +46,6 @@ public class Profile {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
-    @Column(name = "college_year", nullable = false)
-    private Short collegeYear;
-
     @Column(nullable = false)
     private String major;
 

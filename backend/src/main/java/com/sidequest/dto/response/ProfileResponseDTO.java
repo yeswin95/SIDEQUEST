@@ -23,7 +23,6 @@ public class ProfileResponseDTO {
     private String username;
     private String email;
     private String fullName;
-    private Short collegeYear;
     private String major;
     private UserActiveStatus activeStatus;
     private SkillRank rankTier;
