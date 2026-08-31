@@ -93,8 +93,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
         log.error("Database constraint violation", ex);
+        String causeMsg = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        String lower = causeMsg != null ? causeMsg.toLowerCase() : "";
+        // User-friendly mapping for username uniqueness
+        if (lower.contains("idx_users_username") || (lower.contains("username") && (lower.contains("duplicate") || lower.contains("unique")))) {
+            ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Username exists, try something different");
+            problem.setTitle("Username Taken");
+            problem.setProperty("timestamp", Instant.now());
+            problem.setProperty("field", "username");
+            return problem;
+        }
+        if (lower.contains("idx_users_email") || (lower.contains("email") && lower.contains("duplicate"))) {
+            ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Email is already registered");
+            problem.setTitle("Email Taken");
+            problem.setProperty("timestamp", Instant.now());
+            problem.setProperty("field", "email");
+            return problem;
+        }
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT, "Database constraint violation: " + ex.getMostSpecificCause().getMessage());
+                HttpStatus.CONFLICT, "Database constraint violation: " + causeMsg);
         problem.setTitle("Conflict");
         problem.setProperty("timestamp", Instant.now());
         return problem;

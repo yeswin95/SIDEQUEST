@@ -83,8 +83,8 @@ export default function QuestCard({
   requiredSkills,
   roles,
   repoLink,
-  initialUpvotes = 24,
-  commentsCount = 3,
+  initialUpvotes = 0,
+  commentsCount = 0,
   onJoin,
   joinDisabled = false,
   joinLabel = "Apply to Join",
@@ -94,7 +94,8 @@ export default function QuestCard({
   onRequireAuth,
 }: QuestCardProps) {
   const [upvoted, setUpvoted] = useState<boolean | null>(null);
-  const [upvotes, setUpvotes] = useState(initialUpvotes);
+  // Task 4: no hardcoded fallback — use real backend value (0 if none)
+  const [upvotes, setUpvotes] = useState(initialUpvotes ?? 0);
   const [bookmarked, setBookmarked] = useState(() => isSaved ?? getSavedQuestIds().includes(id));
   const [copied, setCopied] = useState(false);
 

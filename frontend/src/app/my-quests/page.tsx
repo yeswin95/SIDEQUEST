@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState, Suspense } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Check, ClipboardList, Eye, Loader2, Plus, Users, X, Trash2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -73,6 +73,21 @@ export default function MyQuestsPage() {
     }
   };
   useEffect(() => { load(); }, []);
+  // Task 3: Direct navigation from feed's View Applications button
+  useEffect(() => {
+    if (loading || posted.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const viewId = params.get("viewApplicants");
+    if (viewId) {
+      const target = posted.find((q) => q.id === viewId);
+      if (target) {
+        setTab("posted");
+        openApplicants(target);
+        // clean URL without reload
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [posted, loading]);
   const openApplicants = async (quest: Quest) => {
     setSelectedQuest(quest);
     setApplicants([]);

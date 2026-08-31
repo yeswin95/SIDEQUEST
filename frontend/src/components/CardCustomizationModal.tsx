@@ -1,9 +1,9 @@
 "use client";
 
-import { X, Check, Upload, Trash } from "lucide-react";
+import { X, Check, Upload, Trash, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import MetalPlayerCard, { PlayerCardConfig } from "./MetalPlayerCard";
-import { SkillRank } from "@/lib/tierConfig";
+import { SkillRank, getUnlockedRanks, RANK_UNLOCK_THRESHOLDS } from "@/lib/tierConfig";
 
 interface CardCustomizationModalProps {
   isOpen: boolean;
@@ -45,11 +45,17 @@ export default function CardCustomizationModal({
 }: CardCustomizationModalProps) {
   const [config, setConfig] = useState<PlayerCardConfig>(initialConfig);
 
+  // Task 5: Rank-gated — only unlocked tiers selectable
+  const unlockedRanks = getUnlockedRanks(userData.skillsCount ?? 0);
+  const isTierUnlocked = (tier: SkillRank) => unlockedRanks.includes(tier);
+
   useEffect(() => {
     if (isOpen) {
-      setConfig(initialConfig);
+      // Gate initial tier: if selected tier is locked, downgrade to highest unlocked
+      const gatedTier = isTierUnlocked(initialConfig.tier) ? initialConfig.tier : unlockedRanks[unlockedRanks.length - 1] || "BRONZE";
+      setConfig({ ...initialConfig, tier: gatedTier });
     }
-  }, [isOpen, initialConfig]);
+  }, [isOpen, initialConfig, userData.skillsCount]);
 
   if (!isOpen) return null;
 
@@ -75,7 +81,8 @@ export default function CardCustomizationModal({
   };
 
   const handleSubmit = () => {
-    onSave(config);
+    const gatedConfig = isTierUnlocked(config.tier) ? config : { ...config, tier: unlockedRanks[unlockedRanks.length - 1] || "BRONZE" };
+    onSave(gatedConfig);
     onClose();
   };
 
@@ -102,24 +109,38 @@ export default function CardCustomizationModal({
           </div>
 
           <div className="space-y-4">
-            {/* Rank Tier Override */}
+            {/* Rank Tier Override — Rank-Gated */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">Rank Rarity Override</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5">Rank Rarity Override <span className="text-[10px] font-normal text-slate-400">({unlockedRanks.length}/5 unlocked)</span></label>
               <div className="grid grid-cols-5 gap-1">
-                {(["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"] as SkillRank[]).map((t) => (
+                {(["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND"] as SkillRank[]).map((t) => {
+                  const unlocked = isTierUnlocked(t);
+                  const required = RANK_UNLOCK_THRESHOLDS[t];
+                  return (
                   <button
                     key={t}
                     type="button"
-                    onClick={() => updateConfig("tier", t)}
-                    className={`rounded py-1 text-[10px] font-bold border transition-all ${config.tier === t
+                    disabled={!unlocked}
+                    onClick={() => unlocked && updateConfig("tier", t)}
+                    title={unlocked ? `${t} — unlocked` : `${t} locked — unlock ${required} skills`}
+                    className={`relative rounded py-1 text-[10px] font-bold border transition-all flex items-center justify-center gap-0.5 ${!unlocked
+                      ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed dark:border-[#282828] dark:bg-[#202020] dark:text-zinc-600 opacity-60"
+                      : config.tier === t
                       ? "border-[#3ecf8e] bg-[#3ecf8e]/10 text-[#3ecf8e]"
                       : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 dark:border-[#282828] dark:bg-[#161616] dark:text-zinc-400"
                       }`}
                   >
+                    {!unlocked && <Lock className="h-2.5 w-2.5" />}
                     {t}
                   </button>
-                ))}
+                  );
+                })}
               </div>
+              {unlockedRanks.length < 5 && (
+                <p className="mt-1.5 text-[10px] text-amber-600 dark:text-amber-400">
+                  Unlock more skills to access higher tiers — next: {(() => { const next = (["BRONZE","SILVER","GOLD","PLATINUM","DIAMOND"] as SkillRank[]).find(t => !isTierUnlocked(t)); return next ? `${next} at ${RANK_UNLOCK_THRESHOLDS[next!]} skills` : ""; })()}
+                </p>
+              )}
             </div>
 
             {/* Custom Title / Tagline */}

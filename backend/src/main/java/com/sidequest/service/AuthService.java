@@ -52,12 +52,17 @@ public class AuthService {
             throw new IllegalArgumentException("College year is required");
         }
 
-        String username = request.getUsername().trim();
+        String rawUsername = request.getUsername().trim();
+        // Sanitize: auto-lowercase and ensure allowed chars only
+        String username = rawUsername.toLowerCase();
+        if (!username.matches("^[a-z0-9_.]+$")) {
+            throw new IllegalArgumentException("Username can only contain lowercase letters, numbers, underscores and dots");
+        }
         String email = request.getEmail().trim().toLowerCase();
         log.info("Register attempt for username={} email={} fullName={} major={} collegeYear={}", username, email, request.getFullName(), request.getMajor(), request.getCollegeYear());
 
         if (userRepository.existsByUsernameIgnoreCase(username)) {
-            throw new IllegalArgumentException("Username is already taken");
+            throw new IllegalArgumentException("Username exists, try something different");
         }
         if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("Email is already registered");

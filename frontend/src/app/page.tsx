@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import QuestCard, { PartyRole } from "@/components/QuestCard";
@@ -34,6 +34,8 @@ interface QuestPost {
   title: string;
   description: string;
   ownerName: string;
+  ownerId?: string | null;
+  ownerEmail?: string | null;
   ownerAvatarUrl?: string;
   ownerRole?: string;
   guildTag?: string;
@@ -59,6 +61,8 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState("All Feed");
   const [sortBy, setSortBy] = useState<SortOption>("best");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -66,6 +70,7 @@ export default function HomePage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalRedirectTo, setAuthModalRedirectTo] = useState<string | undefined>(undefined);
   const pathname = usePathname();
+  const router = useRouter();
 
   const getCurrentUrl = () => {
     if (typeof window === "undefined") return pathname || "/";
@@ -86,25 +91,22 @@ export default function HomePage() {
     setLoading(true);
     try {
       const data = await api.projects.list();
-      // Try to filter out quests posted by logged-in user (users should not see own quests in feed)
-      let currentUserId: string | null = null;
-      let currentEmail: string | null = null;
+      // Keep own quests in feed (task 3) — just capture current user for View Applications button
+      let uid: string | null = null;
+      let email: string | null = null;
       try {
         const me = await api.profiles.getMe();
-        currentUserId = String(me?.userId ?? me?.id ?? "");
-        currentEmail = me?.email?.toLowerCase?.() ?? null;
-      } catch {}
-      const filteredData = Array.isArray(data) ? data.filter((item: any) => {
-        if (!currentUserId && !currentEmail) return true;
-        const ownerId = String(item.owner?.id ?? item.owner?.userId ?? "");
-        const ownerEmail = item.owner?.email?.toLowerCase?.();
-        if (currentUserId && ownerId && ownerId === currentUserId) return false;
-        if (currentEmail && ownerEmail && ownerEmail === currentEmail) return false;
-        return true;
-      }) : data;
+        uid = String(me?.userId ?? me?.id ?? "");
+        email = me?.email?.toLowerCase?.() ?? null;
+        setCurrentUserId(uid || null);
+        setCurrentUserEmail(email);
+      } catch {
+        setCurrentUserId(null);
+        setCurrentUserEmail(null);
+      }
 
-      if (Array.isArray(filteredData) && filteredData.length > 0) {
-        const mapped: QuestPost[] = filteredData.map((item: any) => ({
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped: QuestPost[] = data.map((item: any) => ({
           id: item.id,
           title: item.title,
           description: item.description,
@@ -114,6 +116,7 @@ export default function HomePage() {
           datePosted: item.createdAt || new Date().toISOString(),
           repoLink: item.repoLink,
           ownerId: item.owner?.id ?? item.owner?.userId ?? null,
+          ownerEmail: item.owner?.email?.toLowerCase?.() ?? null,
           requiredSkills: (item.roles || []).flatMap((r: any) =>
             (r.requiredSkills || []).map((s: any) => s.skillName)
           ).filter((val: string, idx: number, self: string[]) => self.indexOf(val) === idx),
@@ -123,13 +126,11 @@ export default function HomePage() {
             filled: r.filledSpots || 0,
             total: r.spotCount || 1,
           })),
-          upvotes: 20 + (item.roles ? item.roles.length * 5 : 0),
-          commentsCount: 2 + (item.roles ? item.roles.length : 0),
-        }));
-        setPosts(mapped);
-      } else if (Array.isArray(filteredData) && filteredData.length === 0 && Array.isArray(data) && data.length > 0) {
-        // All quests were own — show empty rather than mock that leaks own posts
-        setPosts([]);
+          // Task 4: no hardcoded fallback — use real backend data or 0
+          upvotes: typeof item.upvotes === "number" ? item.upvotes : typeof item.votes === "number" ? item.votes : 0,
+          commentsCount: typeof item.commentsCount === "number" ? item.commentsCount : typeof item.comments === "number" ? item.comments : 0,
+        } as QuestPost & { ownerEmail?: string | null }));
+        setPosts(mapped as QuestPost[]);
       } else {
         // Fresh DB: no fallback to dummy — show empty feed
         setPosts([]);
@@ -205,6 +206,17 @@ export default function HomePage() {
         })),
       });
     }
+  };
+
+  const handleViewApplications = (quest: QuestPost) => {
+    router.push(`/my-quests?viewApplicants=${quest.id}`);
+  };
+
+  const isOwner = (quest: QuestPost): boolean => {
+    const qOwnerId = String((quest as any).ownerId ?? "");
+    const qOwnerEmail = String((quest as any).ownerEmail ?? "").toLowerCase();
+    return (!!currentUserId && !!qOwnerId && qOwnerId === currentUserId) ||
+           (!!currentUserEmail && !!qOwnerEmail && qOwnerEmail === currentUserEmail);
   };
 
   return (
@@ -333,7 +345,9 @@ export default function HomePage() {
                     </button>
                   </div>
                 ) : (
-                  filteredPosts.map((post) => (
+                  filteredPosts.map((post) => {
+                    const owned = isOwner(post);
+                    return (
                     <QuestCard
                       key={post.id}
                       id={post.id}
@@ -349,14 +363,16 @@ export default function HomePage() {
                       repoLink={post.repoLink}
                       initialUpvotes={post.upvotes}
                       commentsCount={post.commentsCount}
-                      onJoin={() => handleApplyClick(post)}
+                      joinLabel={owned ? "View Applications" : "Apply to Join"}
+                      onJoin={() => owned ? handleViewApplications(post) : handleApplyClick(post)}
                       isAuthenticated={typeof window !== "undefined" && !!localStorage.getItem("sidequest_jwt_token")}
                       onRequireAuth={() => {
                         setAuthModalRedirectTo(getCurrentUrl());
                         setIsAuthModalOpen(true);
                       }}
                     />
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

@@ -23,6 +23,7 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
 
   // Form fields
   const [username, setUsername] = useState("");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,6 +32,67 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
   const [collegeYear, setCollegeYear] = useState<number>(3); // Default Junior (3)
 
   const passwordsMismatch = activeTab === "signup" && confirmPassword.length > 0 && password !== confirmPassword;
+
+  const sanitizeUsername = (value: string): string => {
+    return value.toLowerCase().replace(/[^a-z0-9_.]/g, "").slice(0, 30);
+  };
+
+  const validateUsername = (value: string): string | null => {
+    if (!value) return null;
+    if (value.length < 3) return "Username must be at least 3 characters";
+    if (!/^[a-z0-9_.]+$/.test(value)) return "Only lowercase letters, numbers, _ and . allowed";
+    if (value.startsWith(".") || value.startsWith("_") || value.endsWith(".") || value.endsWith("_")) return "Cannot start or end with . or _";
+    return null;
+  };
+
+  const handleUsernameChange = (value: string) => {
+    const sanitized = sanitizeUsername(value);
+    setUsername(sanitized);
+    if (value !== sanitized) {
+      setUsernameError("Only lowercase letters, numbers, _ and . allowed — auto-corrected");
+    } else {
+      setUsernameError(validateUsername(sanitized));
+    }
+  };
+
+  const getFriendlyAuthError = (raw: string): string => {
+    const lower = raw.toLowerCase();
+    // Username taken mapping
+    if (
+      lower.includes("username exists") ||
+      lower.includes("username is already taken") ||
+      lower.includes("idx_users_username") ||
+      (lower.includes("username") && (lower.includes("duplicate") || lower.includes("already") || lower.includes("exists") || lower.includes("taken")))
+    ) {
+      return "Username exists, try something different";
+    }
+    if (lower.includes("email is already registered") || (lower.includes("email") && lower.includes("duplicate")) || lower.includes("idx_users_email")) {
+      return "Email is already registered";
+    }
+    if (lower.includes("username can only contain")) {
+      return "Username can only contain lowercase letters, numbers, underscores and dots";
+    }
+    // Try to extract ProblemDetail detail field
+    try {
+      const jsonStart = raw.indexOf("{");
+      if (jsonStart !== -1) {
+        const parsed = JSON.parse(raw.slice(jsonStart));
+        if (parsed.detail) {
+          const d = String(parsed.detail);
+          const dl = d.toLowerCase();
+          if (dl.includes("username exists") || dl.includes("idx_users_username")) return "Username exists, try something different";
+          // Strip technical prefix
+          if (d.startsWith("Database constraint violation:")) return "Username exists, try something different";
+          return d;
+        }
+        if (parsed.errors && parsed.errors.username) return parsed.errors.username;
+      }
+    } catch {}
+    // Strip "API Error 400:" prefix
+    const stripped = raw.replace(/^API Error\s*\d+:\s*/i, "").trim();
+    if (stripped && stripped !== raw) return stripped;
+    return raw || "An authentication error occurred. Please try again.";
+  };
 
   if (!isOpen) return null;
 
@@ -63,11 +125,17 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
           throw new Error("Failed to retrieve access token from backend.");
         }
       } else {
-        if (!username.trim() || !email.trim() || !password || !confirmPassword || !fullName.trim() || !major.trim()) {
+        const sanitizedUsername = sanitizeUsername(username.trim());
+        if (!sanitizedUsername || !email.trim() || !password || !confirmPassword || !fullName.trim() || !major.trim()) {
           throw new Error("All fields are required for sign up.");
         }
-        if (username.trim().length < 3 || username.trim().length > 30) {
+        const uErr = validateUsername(sanitizedUsername);
+        if (uErr) throw new Error(uErr);
+        if (sanitizedUsername.length < 3 || sanitizedUsername.length > 30) {
           throw new Error("Username must be between 3 and 30 characters.");
+        }
+        if (username.trim() !== sanitizedUsername) {
+          setUsername(sanitizedUsername);
         }
         if (password.length < 8) {
           throw new Error("Password must be at least 8 characters long.");
@@ -76,7 +144,7 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
           throw new Error("Passwords do not match");
         }
         const res = await api.auth.register({
-          username: username.trim(),
+          username: sanitizedUsername,
           email: email.trim(),
           password,
           fullName: fullName.trim(),
@@ -122,7 +190,7 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      setErrorMsg(err.message || "An authentication error occurred. Please try again.");
+      setErrorMsg(getFriendlyAuthError(err.message || "An authentication error occurred. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -216,13 +284,21 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
                     type="text"
                     required
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => handleUsernameChange(e.target.value)}
                     placeholder="alexrivera"
                     minLength={3}
                     maxLength={30}
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-900 focus:border-[#3ecf8e] focus:bg-white focus:outline-none dark:border-[#282828] dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors"
+                    pattern="^[a-z0-9_.]+$"
+                    autoComplete="username"
+                    spellCheck={false}
+                    className={`w-full rounded-lg border bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors ${usernameError ? "border-rose-300 focus:border-rose-400 dark:border-rose-800" : "border-slate-200 focus:border-[#3ecf8e] dark:border-[#282828]"}`}
                   />
                 </div>
+                {usernameError ? (
+                  <p className="mt-1 text-[10px] text-rose-600 dark:text-rose-400">{usernameError}</p>
+                ) : (
+                  <p className="mt-1 text-[10px] text-slate-400 dark:text-zinc-500">Only lowercase letters, numbers, _ and . allowed</p>
+                )}
               </div>
 
               {/* Full Name */}
