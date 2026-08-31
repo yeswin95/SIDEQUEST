@@ -41,6 +41,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         registerRequest = RegisterRequest.builder()
+                .username("alexrivera")
                 .email("student@university.edu")
                 .password("securePassword123")
                 .fullName("Alex Rivera")

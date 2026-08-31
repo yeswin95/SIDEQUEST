@@ -55,15 +55,18 @@ CREATE TYPE application_status AS ENUM (
 -- ---------------------------------------------------------------------------
 CREATE TABLE users (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    username        CITEXT          NOT NULL,
     email           CITEXT          NOT NULL,
     password_hash   TEXT            NOT NULL,
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
 
+    CONSTRAINT users_username_not_empty CHECK (length(trim(username::text)) > 0),
     CONSTRAINT users_email_not_empty CHECK (length(trim(email::text)) > 0),
     CONSTRAINT users_password_hash_not_empty CHECK (length(trim(password_hash)) > 0)
 );
 
+CREATE UNIQUE INDEX idx_users_username ON users (username);
 CREATE UNIQUE INDEX idx_users_email ON users (email);
 
 -- ---------------------------------------------------------------------------
@@ -77,6 +80,7 @@ CREATE TABLE user_profiles (
     college_year    SMALLINT            NOT NULL,
     major           TEXT                NOT NULL,
     active_status   user_active_status  NOT NULL DEFAULT 'ACTIVE',
+    rank_tier       skill_rank_tier     NOT NULL DEFAULT 'BRONZE',
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 

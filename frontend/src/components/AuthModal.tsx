@@ -22,6 +22,7 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Form fields
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -62,8 +63,11 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
           throw new Error("Failed to retrieve access token from backend.");
         }
       } else {
-        if (!email.trim() || !password || !confirmPassword || !fullName.trim() || !major.trim()) {
+        if (!username.trim() || !email.trim() || !password || !confirmPassword || !fullName.trim() || !major.trim()) {
           throw new Error("All fields are required for sign up.");
+        }
+        if (username.trim().length < 3 || username.trim().length > 30) {
+          throw new Error("Username must be between 3 and 30 characters.");
         }
         if (password.length < 8) {
           throw new Error("Password must be at least 8 characters long.");
@@ -72,6 +76,7 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
           throw new Error("Passwords do not match");
         }
         const res = await api.auth.register({
+          username: username.trim(),
           email: email.trim(),
           password,
           fullName: fullName.trim(),
@@ -81,17 +86,25 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
         if (res && res.accessToken) {
           setStoredToken(res.accessToken);
           localStorage.setItem("sidequest_username", res.fullName);
+          localStorage.setItem("sidequest_user_handle", res.username || username.trim());
           localStorage.setItem("sidequest_email", res.email);
           localStorage.setItem("sidequest_major", major.trim());
           localStorage.setItem("sidequest_grad_year", String(2024 + collegeYear));
           // Fresh user: zeroed-out dashboard - clear any previous user's local state
+          // Set connected handles to "Not Connected" by default
           try {
             localStorage.removeItem("sidequest_completed_skill_ids");
             localStorage.removeItem("sidequest_next_goals");
             localStorage.removeItem("sidequest_avatar");
             localStorage.removeItem("sidequest_bio");
             localStorage.removeItem("sidequest_card_config");
-            localStorage.removeItem("sidequest_user_handle");
+            localStorage.setItem("sidequest_connected_handles", JSON.stringify([
+              { label: "github.com/alexrivera", href: "https://github.com", icon: "github", status: "Not Connected" },
+              { label: "linkedin.com/in/alexrivera", href: "https://linkedin.com", icon: "linkedin", status: "Not Connected" },
+              { label: "leetcode.com/alexrivera", href: "https://leetcode.com", icon: "leetcode", status: "Not Connected" },
+              { label: "codechef.com/users/alexrivera", href: "https://codechef.com", icon: "codechef", status: "Not Connected" },
+              { label: "alexrivera.dev", href: "https://alexrivera.dev", icon: "portfolio", status: "Not Connected" },
+            ]));
           } catch {}
 
           // Trigger global auth refresh
@@ -192,6 +205,26 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
           {/* Sign Up Fields */}
           {activeTab === "signup" && (
             <>
+              {/* Username */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1 block">
+                  Username <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-zinc-500" />
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="alexrivera"
+                    minLength={3}
+                    maxLength={30}
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-900 focus:border-[#3ecf8e] focus:bg-white focus:outline-none dark:border-[#282828] dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors"
+                  />
+                </div>
+              </div>
+
               {/* Full Name */}
               <div>
                 <label className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1 block">

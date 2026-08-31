@@ -30,6 +30,12 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         // Validate required DB fields explicitly to give 400 not 500
+        if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+            throw new IllegalArgumentException("Username is required");
+        }
+        if (request.getUsername().trim().length() < 3 || request.getUsername().trim().length() > 30) {
+            throw new IllegalArgumentException("Username must be between 3 and 30 characters");
+        }
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
             throw new IllegalArgumentException("Email is required");
         }
@@ -46,15 +52,20 @@ public class AuthService {
             throw new IllegalArgumentException("College year is required");
         }
 
+        String username = request.getUsername().trim();
         String email = request.getEmail().trim().toLowerCase();
-        log.info("Register attempt for email={} fullName={} major={} collegeYear={}", email, request.getFullName(), request.getMajor(), request.getCollegeYear());
+        log.info("Register attempt for username={} email={} fullName={} major={} collegeYear={}", username, email, request.getFullName(), request.getMajor(), request.getCollegeYear());
 
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
+            throw new IllegalArgumentException("Username is already taken");
+        }
         if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("Email is already registered");
         }
 
         try {
             User user = User.builder()
+                    .username(username)
                     .email(email)
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .build();
@@ -122,6 +133,7 @@ public class AuthService {
                 .tokenType("Bearer")
                 .expiresInMs(jwtTokenProvider.getExpirationMs())
                 .userId(user.getId())
+                .username(user.getUsername())
                 .email(email)
                 .fullName(fullName)
                 .build();

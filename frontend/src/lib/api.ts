@@ -46,7 +46,16 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new Error(`API Error ${response.status}: ${errorText || response.statusText}`);
   }
 
-  return response.json() as Promise<T>;
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    return undefined as unknown as T;
+  }
+  const text = await response.text();
+  if (!text) return undefined as unknown as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return undefined as unknown as T;
+  }
 }
 
 export const api = {
@@ -56,8 +65,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(credentials),
       }),
-    register: (data: { email: string; password: string; fullName: string; major: string; collegeYear: number }) =>
-      request<{ accessToken: string; tokenType: string; userId: string; email: string; fullName: string }>('/auth/register', {
+    register: (data: { email: string; password: string; fullName: string; major: string; collegeYear: number; username: string }) =>
+      request<{ accessToken: string; tokenType: string; userId: string; email: string; fullName: string; username: string }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
@@ -98,6 +107,10 @@ export const api = {
         method: 'POST',
       }),
     getApplications: (projectId: string) => request<any[]>(`/projects/${projectId}/applications`),
+    delete: (projectId: string) =>
+      request<void>(`/projects/${projectId}`, {
+        method: 'DELETE',
+      }),
   },
   applications: {
     updateStatus: (applicationId: string, status: 'ACCEPTED' | 'REJECTED') =>
@@ -106,5 +119,9 @@ export const api = {
         body: JSON.stringify({ status }),
       }),
     getMyApplications: () => request<any[]>('/applications/me'),
+    withdraw: (applicationId: string) =>
+      request<void>(`/applications/${applicationId}`, {
+        method: 'DELETE',
+      }),
   },
 };

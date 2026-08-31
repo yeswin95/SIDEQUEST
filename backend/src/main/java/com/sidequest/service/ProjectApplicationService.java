@@ -164,6 +164,20 @@ public class ProjectApplicationService {
         return applications.stream().map(this::toApplicationResponse).toList();
     }
 
+    @Transactional
+    public void withdrawApplication(UUID applicationId) {
+        User currentUser = currentUserService.getCurrentUser();
+        ProjectApplication application = projectApplicationRepository.findByIdWithDetails(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found with id: " + applicationId));
+        if (!application.getApplicant().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Only the applicant can withdraw this application");
+        }
+        if (application.getApplicationStatus() != ApplicationStatus.PENDING) {
+            throw new IllegalArgumentException("Only pending applications can be withdrawn");
+        }
+        projectApplicationRepository.delete(application);
+    }
+
     private ApplicationResponseDTO toApplicationResponse(ProjectApplication application) {
         User applicant = application.getApplicant();
         Profile profile = applicant.getProfile();

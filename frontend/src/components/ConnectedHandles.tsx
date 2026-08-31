@@ -19,11 +19,11 @@ const ICONS: Record<ConnectedHandle["icon"], any> = {
 };
 
 const defaultHandles: ConnectedHandle[] = [
-  { label: "github.com/alexrivera", href: "https://github.com", icon: "github", status: "Connected" },
-  { label: "linkedin.com/in/alexrivera", href: "https://linkedin.com", icon: "linkedin", status: "Connected" },
-  { label: "leetcode.com/alexrivera", href: "https://leetcode.com", icon: "leetcode", status: "Connected" },
-  { label: "codechef.com/users/alexrivera", href: "https://codechef.com", icon: "codechef", status: "Connect" },
-  { label: "alexrivera.dev", href: "https://alexrivera.dev", icon: "portfolio", status: "Connect" },
+  { label: "github.com/alexrivera", href: "https://github.com", icon: "github", status: "Not Connected" },
+  { label: "linkedin.com/in/alexrivera", href: "https://linkedin.com", icon: "linkedin", status: "Not Connected" },
+  { label: "leetcode.com/alexrivera", href: "https://leetcode.com", icon: "leetcode", status: "Not Connected" },
+  { label: "codechef.com/users/alexrivera", href: "https://codechef.com", icon: "codechef", status: "Not Connected" },
+  { label: "alexrivera.dev", href: "https://alexrivera.dev", icon: "portfolio", status: "Not Connected" },
 ];
 
 export default function ConnectedHandles({

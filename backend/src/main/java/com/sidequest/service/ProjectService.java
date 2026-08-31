@@ -204,6 +204,17 @@ public class ProjectService {
                 .build();
     }
 
+    @Transactional
+    public void deleteProject(UUID projectId) {
+        User currentUser = currentUserService.getCurrentUser();
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + projectId));
+        if (!project.getOwner().getId().equals(currentUser.getId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Only the quest author can delete this quest");
+        }
+        projectRepository.delete(project);
+    }
+
     private UserSkillDTO toUserSkillDTO(UserSkill userSkill) {
         return UserSkillDTO.builder()
                 .id(userSkill.getId())

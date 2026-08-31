@@ -1,5 +1,6 @@
 package com.sidequest.entity;
 
+import com.sidequest.enums.SkillRank;
 import com.sidequest.enums.UserActiveStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -55,6 +56,11 @@ public class Profile {
     @Column(name = "active_status", nullable = false)
     @Builder.Default
     private UserActiveStatus activeStatus = UserActiveStatus.ACTIVE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rank_tier", nullable = false)
+    @Builder.Default
+    private SkillRank rankTier = SkillRank.BRONZE;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

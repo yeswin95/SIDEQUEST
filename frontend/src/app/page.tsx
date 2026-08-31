@@ -156,9 +156,25 @@ export default function HomePage() {
     setLoading(true);
     try {
       const data = await api.projects.list();
+      // Try to filter out quests posted by logged-in user (users should not see own quests in feed)
+      let currentUserId: string | null = null;
+      let currentEmail: string | null = null;
+      try {
+        const me = await api.profiles.getMe();
+        currentUserId = String(me?.userId ?? me?.id ?? "");
+        currentEmail = me?.email?.toLowerCase?.() ?? null;
+      } catch {}
+      const filteredData = Array.isArray(data) ? data.filter((item: any) => {
+        if (!currentUserId && !currentEmail) return true;
+        const ownerId = String(item.owner?.id ?? item.owner?.userId ?? "");
+        const ownerEmail = item.owner?.email?.toLowerCase?.();
+        if (currentUserId && ownerId && ownerId === currentUserId) return false;
+        if (currentEmail && ownerEmail && ownerEmail === currentEmail) return false;
+        return true;
+      }) : data;
 
-      if (Array.isArray(data) && data.length > 0) {
-        const mapped: QuestPost[] = data.map((item: any) => ({
+      if (Array.isArray(filteredData) && filteredData.length > 0) {
+        const mapped: QuestPost[] = filteredData.map((item: any) => ({
           id: item.id,
           title: item.title,
           description: item.description,
@@ -167,6 +183,7 @@ export default function HomePage() {
           guildTag: "CampusBuilds",
           datePosted: item.createdAt || new Date().toISOString(),
           repoLink: item.repoLink,
+          ownerId: item.owner?.id ?? item.owner?.userId ?? null,
           requiredSkills: (item.roles || []).flatMap((r: any) =>
             (r.requiredSkills || []).map((s: any) => s.skillName)
           ).filter((val: string, idx: number, self: string[]) => self.indexOf(val) === idx),
@@ -180,8 +197,16 @@ export default function HomePage() {
           commentsCount: 2 + (item.roles ? item.roles.length : 0),
         }));
         setPosts(mapped);
+      } else if (Array.isArray(filteredData) && filteredData.length === 0 && Array.isArray(data) && data.length > 0) {
+        // All quests were own — show empty rather than mock that leaks own posts
+        setPosts([]);
       } else {
-        setPosts(mockFeedPosts);
+        // Fallback to mock filtered similarly when backend unreachable
+        let mockFiltered = mockFeedPosts;
+        if (currentUserId || currentEmail) {
+          mockFiltered = mockFiltered.filter((p) => true); // mock has no owner mapping, keep all
+        }
+        setPosts(mockFiltered);
       }
     } catch {
       setPosts(mockFeedPosts);

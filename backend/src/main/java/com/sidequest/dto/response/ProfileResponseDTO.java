@@ -1,5 +1,6 @@
 package com.sidequest.dto.response;
 
+import com.sidequest.enums.SkillRank;
 import com.sidequest.enums.UserActiveStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,11 +20,14 @@ import java.util.UUID;
 public class ProfileResponseDTO {
 
     private UUID userId;
+    private String username;
     private String email;
     private String fullName;
     private Short collegeYear;
     private String major;
     private UserActiveStatus activeStatus;
+    private SkillRank rankTier;
+    private List<String> unlockedRanks;
     private List<UserSkillDTO> skills;
     private Instant createdAt;
     private Instant updatedAt;

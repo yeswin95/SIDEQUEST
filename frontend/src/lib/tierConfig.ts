@@ -58,3 +58,39 @@ export function getHighestTier(ranks: SkillRank[]): SkillRank {
     TIER_ORDER.indexOf(current) > TIER_ORDER.indexOf(highest) ? current : highest
   );
 }
+
+// ---------------------------------------------------------------------------
+// Rank Unlocking Progression — locked higher ranks, unlocked by skill count
+// ---------------------------------------------------------------------------
+export const RANK_UNLOCK_THRESHOLDS: Record<SkillRank, number> = {
+  BRONZE: 0,
+  SILVER: 3,
+  GOLD: 6,
+  PLATINUM: 10,
+  DIAMOND: 15,
+};
+
+export function isRankUnlocked(rank: SkillRank, completedCount: number): boolean {
+  return completedCount >= (RANK_UNLOCK_THRESHOLDS[rank] ?? 0);
+}
+
+export function getUnlockedRanks(completedCount: number): SkillRank[] {
+  return TIER_ORDER.filter((rank) => isRankUnlocked(rank, completedCount));
+}
+
+export function getNextRankToUnlock(completedCount: number): SkillRank | null {
+  for (const rank of TIER_ORDER) {
+    if (!isRankUnlocked(rank, completedCount)) return rank;
+  }
+  return null;
+}
+
+export function getRankProgress(completedCount: number): { currentRank: SkillRank; nextRank: SkillRank | null; progress: number; required: number } {
+  const unlocked = getUnlockedRanks(completedCount);
+  const currentRank = unlocked.length ? unlocked[unlocked.length - 1] : "BRONZE";
+  const nextRank = getNextRankToUnlock(completedCount);
+  const required = nextRank ? RANK_UNLOCK_THRESHOLDS[nextRank] : RANK_UNLOCK_THRESHOLDS["DIAMOND"];
+  const prevThreshold = RANK_UNLOCK_THRESHOLDS[currentRank] ?? 0;
+  const progress = nextRank ? Math.min(100, Math.round(((completedCount - prevThreshold) / (required - prevThreshold)) * 100)) : 100;
+  return { currentRank, nextRank, progress, required };
+}
