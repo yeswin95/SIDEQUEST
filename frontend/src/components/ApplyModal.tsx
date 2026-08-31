@@ -29,12 +29,9 @@ export interface ApplyModalProps {
   onSuccess: () => void;
 }
 
-const mockApplicantSkills: PlayerSkill[] = [
-  { id: "s1", skillName: "Java", category: "Backend", rankTier: "GOLD", verified: true },
-  { id: "s2", skillName: "Spring Boot", category: "Backend", rankTier: "PLATINUM", verified: true },
-  { id: "s3", skillName: "React", category: "Frontend", rankTier: "SILVER", verified: true },
-  { id: "s4", skillName: "PostgreSQL", category: "Data", rankTier: "GOLD" },
-];
+// Dummy applicant skills removed — fresh user starts with 0 skills (Bronze).
+// Previously 4 mastered mock skills leaked for new users.
+const mockApplicantSkills: PlayerSkill[] = [];
 
 export default function ApplyModal({
   isOpen,
@@ -51,9 +48,9 @@ export default function ApplyModal({
     gradYear: number;
     skills: PlayerSkill[];
   }>({
-    fullName: "Alex Rivera",
-    major: "Computer Science",
-    gradYear: 2027,
+    fullName: "",
+    major: "",
+    gradYear: new Date().getFullYear() + 1,
     skills: mockApplicantSkills,
   });
 
@@ -71,14 +68,18 @@ export default function ApplyModal({
         .then((res) => {
           if (res) {
             setApplicantProfile({
-              fullName: res.fullName || res.email || "Alex Rivera",
-              major: res.major || "Computer Science",
-              gradYear: res.collegeYear ? 2024 + res.collegeYear : 2027,
-              skills: res.skills && res.skills.length > 0 ? res.skills : mockApplicantSkills,
+              fullName: res.fullName || res.email || "",
+              major: res.major || "",
+              gradYear: res.collegeYear ? 2024 + res.collegeYear : new Date().getFullYear() + 1,
+              skills: res.skills && res.skills.length > 0 ? res.skills : [],
             });
+          } else {
+            setApplicantProfile({ fullName: "", major: "", gradYear: new Date().getFullYear() + 1, skills: [] });
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          setApplicantProfile({ fullName: "", major: "", gradYear: new Date().getFullYear() + 1, skills: [] });
+        });
     }
   }, [isOpen]);
 

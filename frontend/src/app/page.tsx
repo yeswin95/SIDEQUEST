@@ -45,86 +45,16 @@ interface QuestPost {
   commentsCount?: number;
 }
 
-const mockFeedPosts: QuestPost[] = [
-  {
-    id: "q1",
-    title: "Campus Ride-Share Matcher (Hackathon MVP)",
-    description:
-      "Building a lightweight ride-share matcher for students commuting between North and South campus. Tight 48-hour deadline for upcoming HackMIT submission. Need reliable team players!",
-    ownerName: "Priya Nair",
-    ownerRole: "Full Stack Lead",
-    guildTag: "CampusBuilds",
-    datePosted: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    requiredSkills: ["React", "Node.js", "PostgreSQL", "Tailwind CSS"],
-    roles: [
-      { id: "r101", roleTitle: "Backend Lead", filled: 1, total: 1 },
-      { id: "r102", roleTitle: "UI/UX Designer", filled: 0, total: 1 },
-      { id: "r103", roleTitle: "Frontend Dev", filled: 1, total: 2 },
-    ],
-    repoLink: "https://github.com/campus-hacks/rideshare",
-    upvotes: 48,
-    commentsCount: 9,
-  },
-  {
-    id: "q2",
-    title: "Automated AI Lecture Summarizer & Flashcard Generator",
-    description:
-      "Fine-tuning an open-source local LLM to transcribe lecture audio and generate bulleted study notes & active recall flashcards. Seeking Python ML & DevOps contributors.",
-    ownerName: "Devon Chen",
-    ownerRole: "AI Researcher",
-    guildTag: "AILab",
-    datePosted: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-    requiredSkills: ["Python", "PyTorch", "FastAPI", "Docker"],
-    roles: [
-      { id: "r201", roleTitle: "ML Engineer", filled: 0, total: 2 },
-      { id: "r202", roleTitle: "DevOps / Infra", filled: 1, total: 1 },
-    ],
-    upvotes: 35,
-    commentsCount: 6,
-  },
-  {
-    id: "q3",
-    title: "SideQuest: Gamified Skill Matrix & Party Matchmaker",
-    description:
-      "RPG-styled campus quest board & peer-verified skill progression tree. Integrating high-performance Spring Boot backend microservices with Next.js frontend.",
-    ownerName: "Alex Rivera",
-    ownerRole: "Project Founder",
-    guildTag: "CSGuild",
-    datePosted: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
-    requiredSkills: ["Java", "Spring Boot", "React", "Docker", "PostgreSQL"],
-    roles: [
-      { id: "r301", roleTitle: "Backend Architect", filled: 1, total: 1 },
-      { id: "r302", roleTitle: "Frontend Engineer", filled: 1, total: 2 },
-      { id: "r303", roleTitle: "Quality Auditor", filled: 0, total: 1 },
-    ],
-    repoLink: "https://github.com/sidequest-dev/sidequest",
-    upvotes: 72,
-    commentsCount: 14,
-  },
-  {
-    id: "q4",
-    title: "Autonomous Dorm Coffee Delivery Bot",
-    description:
-      "Hardware + IoT delivery rover for late night dorm deliveries during midterms. Closed party rosters currently working on obstacle avoidance sensors.",
-    ownerName: "Marcus Vance",
-    ownerRole: "Robotics Lead",
-    guildTag: "IoTLab",
-    datePosted: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
-    requiredSkills: ["Python", "Raspberry Pi", "C++", "Computer Vision"],
-    roles: [
-      { id: "r401", roleTitle: "Hardware Lead", filled: 1, total: 1 },
-      { id: "r402", roleTitle: "Mobile Dev", filled: 1, total: 1 },
-    ],
-    upvotes: 29,
-    commentsCount: 4,
-  },
-];
+// Dummy feed removed — fresh DB shows empty until real quests are posted.
+// Previously contained 4 mock posts (Campus Ride-Share, AI Summarizer, etc.).
+// Kept as empty array to avoid dummy leaks; HomePage now renders "No Quests in Feed".
+const mockFeedPosts: QuestPost[] = [];
 
 type SortOption = "best" | "latest" | "top" | "open";
 
 export default function HomePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [posts, setPosts] = useState<QuestPost[]>(mockFeedPosts);
+  const [posts, setPosts] = useState<QuestPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState("All Feed");
@@ -201,15 +131,11 @@ export default function HomePage() {
         // All quests were own — show empty rather than mock that leaks own posts
         setPosts([]);
       } else {
-        // Fallback to mock filtered similarly when backend unreachable
-        let mockFiltered = mockFeedPosts;
-        if (currentUserId || currentEmail) {
-          mockFiltered = mockFiltered.filter((p) => true); // mock has no owner mapping, keep all
-        }
-        setPosts(mockFiltered);
+        // Fresh DB: no fallback to dummy — show empty feed
+        setPosts([]);
       }
     } catch {
-      setPosts(mockFeedPosts);
+      setPosts([]);
     } finally {
       setLoading(false);
     }
