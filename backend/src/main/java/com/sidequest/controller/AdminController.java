@@ -21,6 +21,45 @@ public class AdminController {
     @Value("${sidequest.admin.purge-secret:}")
     private String purgeSecret;
 
+    @PostMapping("/migrate")
+    public ResponseEntity<Map<String, Object>> migrate(
+            @RequestHeader(value = "X-Purge-Secret", required = false) String providedSecret) {
+        String expected = purgeSecret != null ? purgeSecret.trim() : "";
+        if (!expected.isEmpty() && (providedSecret == null || !providedSecret.equals(expected))) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "error", "Forbidden: invalid X-Purge-Secret",
+                    "hint", "Set header X-Purge-Secret to value of env var PURGE_SECRET"
+            ));
+        }
+        try {
+            jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS citext");
+            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username CITEXT");
+            Integer nulls = jdbcTemplate.queryForObject("SELECT count(*) FROM users WHERE username IS NULL", Integer.class);
+            if (nulls != null && nulls > 0) {
+                jdbcTemplate.update("UPDATE users SET username = lower(split_part(email::text, '@', 1)) || '_' || substr(id::text, 1, 4) WHERE username IS NULL");
+            }
+            jdbcTemplate.execute("""
+                    DO $$
+                    DECLARE r RECORD;
+                    BEGIN
+                      FOR r IN SELECT username, array_agg(id) AS ids, count(*) AS cnt FROM users GROUP BY username HAVING count(*) > 1
+                      LOOP
+                        FOR i IN 2..array_length(r.ids, 1) LOOP
+                          UPDATE users SET username = r.username || '_' || substr(r.ids[i]::text, 1, 4) WHERE id = r.ids[i];
+                        END LOOP;
+                      END LOOP;
+                    END $$;
+                    """);
+            try { jdbcTemplate.execute("ALTER TABLE users ALTER COLUMN username SET NOT NULL"); } catch (Exception ignored) {}
+            try { jdbcTemplate.execute("ALTER TABLE users ADD CONSTRAINT users_username_not_empty CHECK (length(trim(username::text)) > 0)"); } catch (Exception ignored) {}
+            jdbcTemplate.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (username)");
+            jdbcTemplate.execute("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS rank_tier skill_rank_tier NOT NULL DEFAULT 'BRONZE'");
+            return ResponseEntity.ok(Map.of("status", "migrated", "message", "username + rank_tier migration applied"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/purge")
     public ResponseEntity<Map<String, Object>> purge(
             @RequestHeader(value = "X-Purge-Secret", required = false) String providedSecret) {
@@ -33,6 +72,13 @@ public class AdminController {
                     "hint", "Set header X-Purge-Secret to value of env var PURGE_SECRET"
             ));
         }
+
+        // Ensure schema is migrated before truncate (so username column exists)
+        try {
+            jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS citext");
+            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username CITEXT");
+            jdbcTemplate.execute("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS rank_tier skill_rank_tier NOT NULL DEFAULT 'BRONZE'");
+        } catch (Exception ignored) {}
 
         // Truncate all user-generated data; skill taxonomy preserved
         jdbcTemplate.execute("""
