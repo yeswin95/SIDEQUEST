@@ -23,6 +23,9 @@ public class ApplicantProfileDTO {
     private String fullName;
     private String major;
     private UserActiveStatus activeStatus;
+    private String bio;
+    private String avatarUrl;
+    private String cardConfig;
     @Builder.Default
     private List<UserSkillDTO> skills = new ArrayList<>();
 }

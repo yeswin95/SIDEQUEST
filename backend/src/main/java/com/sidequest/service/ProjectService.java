@@ -181,11 +181,15 @@ public class ProjectService {
         int totalOpen = roleDTOs.stream().mapToInt(ProjectRoleDTO::getOpenSpots).sum();
 
         User owner = project.getOwner();
+        var ownerProfile = owner.getProfile();
         ProjectOwnerDTO ownerDTO = ProjectOwnerDTO.builder()
                 .id(owner.getId())
                 .email(owner.getEmail())
-                .fullName(owner.getProfile() != null ? owner.getProfile().getFullName() : owner.getEmail())
-                .major(owner.getProfile() != null ? owner.getProfile().getMajor() : null)
+                .fullName(ownerProfile != null ? ownerProfile.getFullName() : owner.getEmail())
+                .major(ownerProfile != null ? ownerProfile.getMajor() : null)
+                .avatarUrl(ownerProfile != null ? ownerProfile.getAvatarUrl() : null)
+                .cardConfig(ownerProfile != null ? ownerProfile.getCardConfig() : null)
+                .bio(ownerProfile != null ? ownerProfile.getBio() : null)
                 .build();
 
         long upvotes = projectVoteRepository.countByProjectIdAndVoteType(project.getId(), VoteType.UP);

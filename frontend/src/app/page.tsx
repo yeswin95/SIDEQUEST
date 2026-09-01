@@ -127,6 +127,7 @@ export default function HomePage() {
           repoLink: item.repoLink,
           ownerId: item.owner?.id ?? item.owner?.userId ?? null,
           ownerEmail: item.owner?.email?.toLowerCase?.() ?? null,
+          ownerAvatarUrl: item.owner?.avatarUrl || null,
           requiredSkills: (item.roles || []).flatMap((r: any) =>
             (r.requiredSkills || []).map((s: any) => s.skillName)
           ).filter((val: string, idx: number, self: string[]) => self.indexOf(val) === idx),

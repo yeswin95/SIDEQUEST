@@ -214,7 +214,7 @@ export default function MyQuestsPage() {
 
 function Empty({ text }: { text: string }) { return <div className="rounded-xl border border-dashed border-slate-200 bg-white px-5 py-16 text-center text-sm text-slate-500 dark:border-[#383838] dark:bg-[#1c1c1c] dark:text-zinc-400">{text}</div>; }
 function ApplicantModal({ quest, applicants, pending, onClose, onDecide, onViewProfile }: { quest: Quest; applicants: Application[]; pending: number; onClose: () => void; onDecide: (application: Application, status: "ACCEPTED" | "REJECTED") => void; onViewProfile: (application: Application) => void }) {
-  return <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={onClose}><aside onClick={(event) => event.stopPropagation()} className="h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl dark:bg-[#1c1c1c] sm:p-6"><div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4 dark:border-[#282828]"><div><h2 className="text-base font-semibold">Applicants</h2><p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">{quest.title} · {pending} pending</p></div><button type="button" onClick={onClose} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-[#282828]"><X className="h-5 w-5" /></button></div><div className="mt-4 space-y-3">{applicants.length ? applicants.map((application) => <article key={application.id} className="rounded-xl border border-slate-200 p-4 dark:border-[#383838]"><div className="flex gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3ecf8e]/15 text-xs font-bold text-[#21875c] dark:text-[#3ecf8e]">{(application.applicant?.fullName || "A").slice(0, 1)}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{application.applicant?.fullName || application.applicant?.email || "Applicant"}</h3><span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${statusStyle[application.applicationStatus]}`}>{application.applicationStatus}</span></div><p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">{application.applicant?.major || "Campus builder"}</p><div className="mt-2 flex flex-wrap gap-1">{application.applicant?.skills?.slice(0, 4).map((skill, index) => <span key={`${skill.skillName}-${index}`} className="rounded bg-slate-100 px-2 py-0.5 text-[10px] dark:bg-[#282828]">{skill.skillName}</span>)}</div><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onViewProfile(application)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-semibold dark:border-[#383838] hover:bg-slate-50 dark:hover:bg-[#282828]">Applicant Profile</button>{application.applicationStatus === "PENDING" && <><button type="button" onClick={() => onDecide(application, "ACCEPTED")} className="inline-flex items-center gap-1 rounded-lg bg-[#3ecf8e] px-2.5 py-1.5 text-[10px] font-semibold text-[#042f1a]"><Check className="h-3 w-3" />Accept</button><button type="button" onClick={() => onDecide(application, "REJECTED")} className="rounded-lg border border-rose-300 px-2.5 py-1.5 text-[10px] font-semibold text-rose-600 dark:border-rose-900 dark:text-rose-300">Reject</button></>}</div></div></div></article>) : <Empty text="No applications have been submitted yet." />}</div></aside></div>;
+  return <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={onClose}><aside onClick={(event) => event.stopPropagation()} className="h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl dark:bg-[#1c1c1c] sm:p-6"><div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4 dark:border-[#282828]"><div><h2 className="text-base font-semibold">Applicants</h2><p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">{quest.title} · {pending} pending</p></div><button type="button" onClick={onClose} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-[#282828]"><X className="h-5 w-5" /></button></div><div className="mt-4 space-y-3">{applicants.length ? applicants.map((application) => <article key={application.id} className="rounded-xl border border-slate-200 p-4 dark:border-[#383838]"><div className="flex gap-3">{(application.applicant as any)?.avatarUrl ? (<img src={(application.applicant as any).avatarUrl} alt={application.applicant?.fullName || "Applicant"} className="h-9 w-9 rounded-full object-cover shrink-0 ring-1 ring-[#3ecf8e]/20" />) : (<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3ecf8e]/15 text-xs font-bold text-[#21875c] dark:text-[#3ecf8e]">{(application.applicant?.fullName || "A").slice(0, 1)}</div>)}<div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{application.applicant?.fullName || application.applicant?.email || "Applicant"}</h3><span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${statusStyle[application.applicationStatus]}`}>{application.applicationStatus}</span></div><p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">{application.applicant?.major || "Campus builder"}</p><div className="mt-2 flex flex-wrap gap-1">{application.applicant?.skills?.slice(0, 4).map((skill, index) => <span key={`${skill.skillName}-${index}`} className="rounded bg-slate-100 px-2 py-0.5 text-[10px] dark:bg-[#282828]">{skill.skillName}</span>)}</div><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => onViewProfile(application)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] font-semibold dark:border-[#383838] hover:bg-slate-50 dark:hover:bg-[#282828]">Applicant Profile</button>{application.applicationStatus === "PENDING" && <><button type="button" onClick={() => onDecide(application, "ACCEPTED")} className="inline-flex items-center gap-1 rounded-lg bg-[#3ecf8e] px-2.5 py-1.5 text-[10px] font-semibold text-[#042f1a]"><Check className="h-3 w-3" />Accept</button><button type="button" onClick={() => onDecide(application, "REJECTED")} className="rounded-lg border border-rose-300 px-2.5 py-1.5 text-[10px] font-semibold text-rose-600 dark:border-rose-900 dark:text-rose-300">Reject</button></>}</div></div></div></article>) : <Empty text="No applications have been submitted yet." />}</div></aside></div>;
 }
 
 function ApplicantProfileModal({ application, onClose }: { application: Application; onClose: () => void }) {
@@ -244,6 +244,35 @@ function ApplicantProfileModal({ application, onClose }: { application: Applicat
   const major = freshProfile?.major || application.applicant?.major || "Campus Builder";
   const activeStatus = freshProfile?.activeStatus === "IN_A_PARTY" ? "IN_A_PARTY" : freshProfile?.activeStatus === "INACTIVE" ? "OFFLINE" : "OPEN_TO_JOIN";
   const rankTier = (freshProfile?.rankTier as any) || highest;
+  const avatarUrl = freshProfile?.avatarUrl || (application.applicant as any)?.avatarUrl || null;
+  const bio = freshProfile?.bio || (application.applicant as any)?.bio || `Applied for ${application.roleTitle} on ${application.projectTitle} — ${skills.length} skills unlocked`;
+  const cardConfigStr = freshProfile?.cardConfig || (application.applicant as any)?.cardConfig || null;
+  const parsedCardConfig = (() => {
+    if (cardConfigStr) {
+      try {
+        const parsed = JSON.parse(cardConfigStr);
+        return {
+          tier: parsed.tier || rankTier,
+          backgroundType: parsed.backgroundType || "default",
+          pattern: parsed.pattern || "circuit",
+          backgroundImage: parsed.backgroundImage,
+          gradientStart: parsed.gradientStart,
+          gradientEnd: parsed.gradientEnd,
+          customTitle: parsed.customTitle ?? major,
+          showAvatar: parsed.showAvatar ?? true,
+          showUsername: parsed.showUsername ?? true,
+          showLevel: parsed.showLevel ?? true,
+          showTier: parsed.showTier ?? true,
+          showMainSkill: parsed.showMainSkill ?? true,
+          showQuestCount: parsed.showQuestCount ?? true,
+          showAchievementCount: parsed.showAchievementCount ?? true,
+          showCampusBadgeCount: parsed.showCampusBadgeCount ?? true,
+          showGithub: parsed.showGithub ?? true,
+        } as any;
+      } catch {}
+    }
+    return { tier: rankTier, backgroundType: "default", pattern: "circuit", showAvatar: true, showUsername: true, showLevel: true, showTier: true, showMainSkill: true, showQuestCount: true, showAchievementCount: true, showCampusBadgeCount: true, showGithub: true, customTitle: major } as any;
+  })();
   const isNew = skills.length === 0;
   const achievements = isNew ? mockAchievements.map(b => ({ ...b, status: "locked" as const, progress: 0, currentValue: 0 })) : mockAchievements;
   const badges = isNew ? mockCampusBadges.map(b => ({ ...b, status: "locked" as const, progress: 0, currentValue: 0 })) : mockCampusBadges;
@@ -257,9 +286,9 @@ function ApplicantProfileModal({ application, onClose }: { application: Applicat
         <div className="p-6">
         <div className="space-y-6">
           <div className="flex justify-center">
-            <MetalPlayerCard config={{ tier: rankTier, backgroundType: "default", pattern: "circuit", showAvatar: true, showUsername: true, showLevel: true, showTier: true, showMainSkill: true, showQuestCount: true, showAchievementCount: true, showCampusBadgeCount: true, showGithub: true, customTitle: major }} userData={{ fullName, level, skillsCount: skills.length, questsCount: isNew ? 0 : 5, achievementsCount: achievements.filter(b=>b.status==="earned").length, badgesCount: badges.filter(b=>b.status==="earned").length, mainSkill: skills[0]?.skillName }} />
+            <MetalPlayerCard config={parsedCardConfig} userData={{ fullName, level, skillsCount: skills.length, questsCount: isNew ? 0 : 5, achievementsCount: achievements.filter(b=>b.status==="earned").length, badgesCount: badges.filter(b=>b.status==="earned").length, mainSkill: skills[0]?.skillName, avatarUrl: avatarUrl || undefined }} />
           </div>
-          <PlayerProfileCard fullName={fullName} major={major} activeStatus={activeStatus as any} skills={skills} bio={`Applied for ${application.roleTitle} on ${application.projectTitle} — ${skills.length} skills unlocked`} />
+          <PlayerProfileCard fullName={fullName} major={major} activeStatus={activeStatus as any} skills={skills} bio={bio} avatarUrl={avatarUrl} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-[#282828] dark:bg-[#1c1c1c]">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 mb-3">Achievements</h4>

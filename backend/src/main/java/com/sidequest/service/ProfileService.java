@@ -57,6 +57,20 @@ public class ProfileService {
         profile.setMajor(request.getMajor().trim());
         profile.setActiveStatus(request.getActiveStatus());
 
+        // Persistence for avatar, bio, card customizations - immediate DB update
+        if (request.getBio() != null) {
+            String trimmedBio = request.getBio().trim();
+            profile.setBio(trimmedBio.isEmpty() ? null : request.getBio());
+        }
+        if (request.getAvatarUrl() != null) {
+            String av = request.getAvatarUrl().trim();
+            profile.setAvatarUrl(av.isEmpty() ? null : request.getAvatarUrl());
+        }
+        if (request.getCardConfig() != null) {
+            String cc = request.getCardConfig().trim();
+            profile.setCardConfig(cc.isEmpty() ? null : request.getCardConfig());
+        }
+
         Profile savedProfile = profileRepository.save(profile);
         List<UserSkill> userSkills = userSkillRepository.findByUserIdWithSkill(user.getId());
         return toProfileResponse(user, savedProfile, userSkills);
@@ -79,6 +93,9 @@ public class ProfileService {
                 .major(profile.getMajor())
                 .activeStatus(profile.getActiveStatus())
                 .rankTier(profile.getRankTier() != null ? profile.getRankTier() : computedRank)
+                .bio(profile.getBio())
+                .avatarUrl(profile.getAvatarUrl())
+                .cardConfig(profile.getCardConfig())
                 .unlockedRanks(unlockedRanks)
                 .skills(userSkills.stream().map(this::toUserSkillDTO).toList())
                 .createdAt(profile.getCreatedAt())

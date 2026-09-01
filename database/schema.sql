@@ -86,6 +86,9 @@ CREATE TABLE user_profiles (
     major           TEXT                NOT NULL,
     active_status   user_active_status  NOT NULL DEFAULT 'ACTIVE',
     rank_tier       skill_rank_tier     NOT NULL DEFAULT 'BRONZE',
+    bio             TEXT,
+    avatar_url      TEXT,
+    card_config     TEXT,
     created_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 

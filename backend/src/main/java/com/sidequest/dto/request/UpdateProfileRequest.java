@@ -27,4 +27,13 @@ public class UpdateProfileRequest {
 
     @NotNull
     private UserActiveStatus activeStatus;
+
+    @Size(max = 1000)
+    private String bio;
+
+    @Size(max = 2000000)
+    private String avatarUrl;
+
+    @Size(max = 100000)
+    private String cardConfig;
 }

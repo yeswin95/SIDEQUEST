@@ -26,6 +26,9 @@ public class ProfileResponseDTO {
     private String major;
     private UserActiveStatus activeStatus;
     private SkillRank rankTier;
+    private String bio;
+    private String avatarUrl;
+    private String cardConfig;
     private List<String> unlockedRanks;
     private List<UserSkillDTO> skills;
     private Instant createdAt;

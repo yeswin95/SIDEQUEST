@@ -59,6 +59,15 @@ public class Profile {
     @Builder.Default
     private SkillRank rankTier = SkillRank.BRONZE;
 
+    @Column(name = "bio", columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
+    private String avatarUrl;
+
+    @Column(name = "card_config", columnDefinition = "TEXT")
+    private String cardConfig;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

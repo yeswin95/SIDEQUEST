@@ -50,6 +50,49 @@ export default function PublicProfileModal({ userId, onClose }: Props) {
     ? mockCampusBadges.map(b => ({ ...b, status: "locked" as const, progress: 0, currentValue: 0 }))
     : mockCampusBadges;
 
+  // Parse persisted card config for public visibility - real-time sync from backend
+  const parsedCardConfig = (() => {
+    if (profile?.cardConfig) {
+      try {
+        const parsed = JSON.parse(profile.cardConfig);
+        // Ensure required fields exist, fallback to defaults if incomplete
+        return {
+          tier: parsed.tier || (profile.rankTier as any) || highest,
+          backgroundType: parsed.backgroundType || "default",
+          pattern: parsed.pattern || "circuit",
+          backgroundImage: parsed.backgroundImage,
+          gradientStart: parsed.gradientStart,
+          gradientEnd: parsed.gradientEnd,
+          customTitle: parsed.customTitle ?? profile.major ?? "Student Builder",
+          showAvatar: parsed.showAvatar ?? true,
+          showUsername: parsed.showUsername ?? true,
+          showLevel: parsed.showLevel ?? true,
+          showTier: parsed.showTier ?? true,
+          showMainSkill: parsed.showMainSkill ?? true,
+          showQuestCount: parsed.showQuestCount ?? true,
+          showAchievementCount: parsed.showAchievementCount ?? true,
+          showCampusBadgeCount: parsed.showCampusBadgeCount ?? true,
+          showGithub: parsed.showGithub ?? true,
+        } as any;
+      } catch {}
+    }
+    return {
+      tier: (profile?.rankTier as any) || highest,
+      backgroundType: "default",
+      pattern: "circuit",
+      showAvatar: true,
+      showUsername: true,
+      showLevel: true,
+      showTier: true,
+      showMainSkill: true,
+      showQuestCount: true,
+      showAchievementCount: true,
+      showCampusBadgeCount: true,
+      showGithub: true,
+      customTitle: profile?.major || "Student Builder",
+    } as any;
+  })();
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-6xl max-h-[92vh] overflow-y-auto rounded-2xl bg-[#f8fafc] dark:bg-[#121212] shadow-2xl flex flex-col">
@@ -66,21 +109,7 @@ export default function PublicProfileModal({ userId, onClose }: Props) {
           <div className="mt-4 space-y-6">
             <div className="flex justify-center">
               <MetalPlayerCard
-                config={{
-                  tier: (profile.rankTier as any) || highest,
-                  backgroundType: "default",
-                  pattern: "circuit",
-                  showAvatar: true,
-                  showUsername: true,
-                  showLevel: true,
-                  showTier: true,
-                  showMainSkill: true,
-                  showQuestCount: true,
-                  showAchievementCount: true,
-                  showCampusBadgeCount: true,
-                  showGithub: true,
-                  customTitle: profile.major || "Student Builder",
-                }}
+                config={parsedCardConfig}
                 userData={{
                   fullName: profile.fullName,
                   level,
@@ -89,6 +118,7 @@ export default function PublicProfileModal({ userId, onClose }: Props) {
                   achievementsCount: achievements.filter(b => b.status === "earned").length,
                   badgesCount: badges.filter(b => b.status === "earned").length,
                   mainSkill: skills[0]?.skillName,
+                  avatarUrl: profile.avatarUrl || undefined,
                 }}
               />
             </div>
@@ -100,7 +130,8 @@ export default function PublicProfileModal({ userId, onClose }: Props) {
                 profile.activeStatus === "INACTIVE" ? "OFFLINE" : "OPEN_TO_JOIN"
               }
               skills={skills}
-              bio={isNew ? "New builder — just getting started!" : `${profile.fullName} — ${skills.length} skills unlocked`}
+              bio={profile.bio || (isNew ? "New builder — just getting started!" : `${profile.fullName} — ${skills.length} skills unlocked`)}
+              avatarUrl={profile.avatarUrl || null}
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-[#282828] dark:bg-[#1c1c1c]">

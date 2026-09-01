@@ -86,6 +86,43 @@ export default function ProfilePage() {
   }, []);
   const openAuth = (tab: "signin" | "signup") => { setAuthInitialTab(tab); setAuthModalOpen(true); };
 
+  // Helpers to persist profile mutations immediately to backend and sync public visibility
+  const buildPersistPayload = (overrides: { bio?: string | null; avatarUrl?: string | null; cardConfig?: string | null; fullName?: string; major?: string; activeStatus?: string }) => {
+    const currentFullName = overrides.fullName ?? displayName ?? profile.fullName ?? "New Builder";
+    const currentMajor = overrides.major ?? academicMajor ?? profile.major ?? "Undeclared";
+    const statusForBackend = (() => {
+      if (overrides.activeStatus) return overrides.activeStatus;
+      return activeStatus === "OPEN_TO_JOIN" ? "ACTIVE" : activeStatus === "OFFLINE" ? "INACTIVE" : "IN_A_PARTY";
+    })();
+    return {
+      fullName: currentFullName || "New Builder",
+      major: currentMajor || "Undeclared",
+      activeStatus: statusForBackend,
+      bio: overrides.bio !== undefined ? overrides.bio : bio,
+      avatarUrl: overrides.avatarUrl !== undefined ? overrides.avatarUrl : avatarUrl,
+      cardConfig: overrides.cardConfig !== undefined ? overrides.cardConfig : (localStorage.getItem("sidequest_card_config") || (cardConfig ? JSON.stringify(cardConfig) : null)),
+    };
+  };
+
+  const persistProfileFields = (overrides: { bio?: string | null; avatarUrl?: string | null; cardConfig?: string | null; fullName?: string; major?: string; activeStatus?: string }) => {
+    if (!getStoredToken()) return Promise.resolve(null);
+    const payload = buildPersistPayload(overrides);
+    return api.profiles.updateMe(payload).then((res) => {
+      if (res) {
+        // Keep localStorage in sync for real-time public sync fallback and instant UI
+        if (res.bio !== undefined) localStorage.setItem("sidequest_bio", res.bio || "");
+        if (res.avatarUrl !== undefined) {
+          if (res.avatarUrl) localStorage.setItem("sidequest_avatar", res.avatarUrl);
+          else localStorage.removeItem("sidequest_avatar");
+        }
+        if (res.cardConfig) localStorage.setItem("sidequest_card_config", res.cardConfig);
+        window.dispatchEvent(new CustomEvent("sidequest_avatar_changed"));
+        window.dispatchEvent(new CustomEvent("sidequest_auth_changed"));
+      }
+      return res;
+    }).catch((e) => { console.error("Failed to persist profile fields", e); return null; });
+  };
+
   // Initial loads - only when authenticated; zeroed state otherwise
   useEffect(() => {
     if (!isAuthed) return;
@@ -109,6 +146,7 @@ export default function ProfilePage() {
             ...prev,
             fullName: mappedName,
             major: mappedMajor,
+            bio: res.bio ?? prev.bio ?? "",
             skills: mappedSkills,
           }));
 
@@ -121,13 +159,34 @@ export default function ProfilePage() {
             : "OPEN_TO_JOIN";
           setActiveStatus(mappedStatus);
 
+          // Persist backend truth immediately to state + localStorage for global sync
+          if (res.bio !== undefined && res.bio !== null) { setBio(res.bio); setProfile((p) => ({ ...p, bio: res.bio })); localStorage.setItem("sidequest_bio", res.bio); }
+          else if (res.bio === null) { setBio(""); localStorage.removeItem("sidequest_bio"); }
+
+          if (res.avatarUrl !== undefined) {
+            if (res.avatarUrl) { setAvatarUrl(res.avatarUrl); localStorage.setItem("sidequest_avatar", res.avatarUrl); }
+            else { setAvatarUrl(null); localStorage.removeItem("sidequest_avatar"); }
+          }
+
+          if (res.cardConfig) {
+            try {
+              const parsed = JSON.parse(res.cardConfig);
+              setCardConfig(parsed);
+              localStorage.setItem("sidequest_card_config", res.cardConfig);
+            } catch {}
+          }
+
           // Only seed display fields from backend if localStorage empty (no leak of previous user's data)
           if (!localStorage.getItem("sidequest_username") && mappedName) setDisplayName(mappedName);
           else if (localStorage.getItem("sidequest_username")) setDisplayName(localStorage.getItem("sidequest_username") || mappedName);
+          else setDisplayName(mappedName);
           if (!localStorage.getItem("sidequest_major") && mappedMajor) setAcademicMajor(mappedMajor);
+          else if (localStorage.getItem("sidequest_major")) setAcademicMajor(localStorage.getItem("sidequest_major") || mappedMajor);
+          else setAcademicMajor(mappedMajor);
           if (localStorage.getItem("sidequest_email")) setEmailAddress(localStorage.getItem("sidequest_email") || res.email || "");
           else if (res.email) setEmailAddress(res.email);
           if (localStorage.getItem("sidequest_user_handle")) setUserHandle(localStorage.getItem("sidequest_user_handle") || "");
+          if (res.username && !localStorage.getItem("sidequest_user_handle")) setUserHandle(res.username);
         }
       })
       .catch(() => {});
@@ -227,6 +286,8 @@ export default function ProfilePage() {
         setAvatarUrl(result);
         localStorage.setItem("sidequest_avatar", result);
         window.dispatchEvent(new CustomEvent("sidequest_avatar_changed"));
+        // Immediate backend persistence for public sync
+        persistProfileFields({ avatarUrl: result });
       };
       reader.readAsDataURL(file);
     }
@@ -237,6 +298,7 @@ export default function ProfilePage() {
     setAvatarUrl(null);
     localStorage.removeItem("sidequest_avatar");
     window.dispatchEvent(new CustomEvent("sidequest_avatar_changed"));
+    persistProfileFields({ avatarUrl: "" });
   };
 
   const handleSaveProfile = () => {
@@ -262,10 +324,16 @@ export default function ProfilePage() {
         fullName: displayName,
         major: academicMajor,
         activeStatus: statusMapping,
+        bio: trimmedBio,
+        avatarUrl: avatarUrl || "",
+        cardConfig: JSON.stringify(cardConfig),
       })
       .then((res) => {
         console.log("Profile persisted on backend:", res);
+        if (res?.bio !== undefined) localStorage.setItem("sidequest_bio", res.bio || "");
+        if (res?.cardConfig) localStorage.setItem("sidequest_card_config", res.cardConfig);
         window.dispatchEvent(new CustomEvent("sidequest_auth_changed"));
+        window.dispatchEvent(new CustomEvent("sidequest_avatar_changed"));
       })
       .catch((err) => {
         console.error("Failed to persist profile on backend:", err);
@@ -278,7 +346,10 @@ export default function ProfilePage() {
 
   const handleSaveCardConfig = (newConfig: PlayerCardConfig) => {
     setCardConfig(newConfig);
-    localStorage.setItem("sidequest_card_config", JSON.stringify(newConfig));
+    const serialized = JSON.stringify(newConfig);
+    localStorage.setItem("sidequest_card_config", serialized);
+    // Immediate backend persistence for global public visibility
+    persistProfileFields({ cardConfig: serialized });
   };
 
   const persistActiveStatus = (newStatus: ActiveStatus) => {
@@ -288,11 +359,7 @@ export default function ProfilePage() {
     const statusMapping = newStatus === "OPEN_TO_JOIN" ? "ACTIVE" : newStatus === "OFFLINE" ? "INACTIVE" : "IN_A_PARTY";
     const currentFullName = displayName || profile.fullName || "New Builder";
     const currentMajor = academicMajor || profile.major || "Undeclared";
-    api.profiles.updateMe({
-      fullName: currentFullName,
-      major: currentMajor,
-      activeStatus: statusMapping,
-    }).then(() => window.dispatchEvent(new CustomEvent("sidequest_auth_changed"))).catch(()=>{});
+    persistProfileFields({ fullName: currentFullName, major: currentMajor, activeStatus: statusMapping } as any);
   };
 
   const highestRank = getHighestTier(profile.skills.map((s) => s.rankTier));

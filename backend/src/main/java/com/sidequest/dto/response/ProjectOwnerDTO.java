@@ -19,4 +19,7 @@ public class ProjectOwnerDTO {
     private String email;
     private String fullName;
     private String major;
+    private String avatarUrl;
+    private String cardConfig;
+    private String bio;
 }

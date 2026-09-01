@@ -193,6 +193,9 @@ public class ProjectApplicationService {
                 .fullName(profile != null ? profile.getFullName() : applicant.getEmail())
                 .major(profile != null ? profile.getMajor() : null)
                 .activeStatus(profile != null ? profile.getActiveStatus() : UserActiveStatus.ACTIVE)
+                .bio(profile != null ? profile.getBio() : null)
+                .avatarUrl(profile != null ? profile.getAvatarUrl() : null)
+                .cardConfig(profile != null ? profile.getCardConfig() : null)
                 .skills(skillDTOs)
                 .build();
 

@@ -68,6 +68,10 @@ public class DatabaseMigrationRunner {
 
                 // user_profiles.rank_tier
                 safeExec("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS rank_tier skill_rank_tier NOT NULL DEFAULT 'BRONZE'");
+                // New profile persistence columns for avatar, bio, card config
+                safeExec("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS bio TEXT");
+                safeExec("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT");
+                safeExec("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS card_config TEXT");
                 // Cleanup deprecated college_year
                 safeExec("DROP INDEX IF EXISTS idx_user_profiles_college_year");
                 safeExec("ALTER TABLE user_profiles DROP CONSTRAINT IF EXISTS user_profiles_college_year_valid");
