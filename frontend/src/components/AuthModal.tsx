@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Mail, Lock, User, GraduationCap, Award, AlertCircle, Loader2 } from "lucide-react";
+import { X, Mail, Lock, User, GraduationCap, Award, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { api, setStoredToken } from "@/lib/api";
 
 interface AuthModalProps {
@@ -29,6 +29,8 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [major, setMajor] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const passwordsMismatch = activeTab === "signup" && confirmPassword.length > 0 && password !== confirmPassword;
 
@@ -364,13 +366,21 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
             <div className="relative">
               <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-zinc-500" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className={`w-full rounded-lg border bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors ${activeTab === "signup" && password && password.length < 8 ? "border-amber-300 focus:border-amber-400" : "border-slate-200 focus:border-[#3ecf8e] dark:border-[#282828]"}`}
+                className={`w-full rounded-lg border bg-slate-50 pl-9 pr-10 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors ${activeTab === "signup" && password && password.length < 8 ? "border-amber-300 focus:border-amber-400" : "border-slate-200 focus:border-[#3ecf8e] dark:border-[#282828]"}`}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-2.5 top-2 p-1 rounded text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
             {activeTab === "signup" && password && password.length > 0 && password.length < 8 && (
               <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">Password must be at least 8 characters</p>
@@ -386,13 +396,21 @@ export default function AuthModal({ isOpen, onClose, redirectTo, initialTab }: A
               <div className="relative">
                 <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-zinc-500" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className={`w-full rounded-lg border bg-slate-50 pl-9 pr-4 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors ${passwordsMismatch ? "border-red-300 focus:border-red-400 dark:border-red-800" : "border-slate-200 focus:border-[#3ecf8e] dark:border-[#282828]"}`}
+                  className={`w-full rounded-lg border bg-slate-50 pl-9 pr-10 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none dark:bg-[#161616] dark:text-zinc-100 dark:focus:bg-[#202020] transition-colors ${passwordsMismatch ? "border-red-300 focus:border-red-400 dark:border-red-800" : "border-slate-200 focus:border-[#3ecf8e] dark:border-[#282828]"}`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  className="absolute right-2.5 top-2 p-1 rounded text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
               {passwordsMismatch && (
                 <p className="mt-1 text-[10px] font-medium text-red-600 dark:text-red-400">Passwords do not match</p>
