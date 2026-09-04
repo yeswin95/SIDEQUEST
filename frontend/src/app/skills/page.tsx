@@ -10,7 +10,7 @@ import NextGoals from "@/components/NextGoals";
 import SkillsToUnlock from "@/components/SkillsToUnlock";
 import { mockSkills, Skill } from "@/lib/skillsData";
 import { loadCompletedSkillIds, loadGoals, saveCompletedSkillIds, saveGoals, UserGoal } from "@/lib/skillState";
-import { getStoredToken } from "@/lib/api";
+import { api, getStoredToken } from "@/lib/api";
 import AuthModal from "@/components/AuthModal";
 import { Layers, List, Network, Lock } from "lucide-react";
 
@@ -82,10 +82,84 @@ function SkillsPageContent() {
     setActiveView(view);
     try { window.localStorage.setItem("sidequest_skills_view", view); } catch {}
   };
+  // Dynamic counter helpers (Task 2: X/Y format)
+  const totalSkills = mockSkills.length;
+  const completedCount = completedSkillIds.length;
+  const totalInCategory = selectedCategories.length === 0
+    ? totalSkills
+    : mockSkills.filter((s) => selectedCategories.includes(s.category)).length;
+  const completedInCategory = selectedCategories.length === 0
+    ? completedCount
+    : completedSkillIds.filter((id) => {
+        const s = mockSkills.find((m) => m.id === id);
+        return s ? selectedCategories.includes(s.category) : false;
+      }).length;
+  const counterLabel = `${completedInCategory}/${totalInCategory} skills`;
+
+  // Backend skill name -> UUID cache for upsert
+  const [backendSkillMap, setBackendSkillMap] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    if (!isAuthed) return;
+    api.skills.getSkillTree().then((tree: any) => {
+      const map = new Map<string, string>();
+      const walk = (nodes: any[]) => {
+        for (const n of nodes) {
+          if (n.skillName && n.id) map.set(`${n.skillName.toLowerCase()}::${n.category?.toLowerCase() || ""}`, String(n.id));
+          if (n.skillName && n.id) {
+            // fallback key by name only
+            if (!map.has(n.skillName.toLowerCase())) map.set(n.skillName.toLowerCase(), String(n.id));
+          }
+          if (Array.isArray(n.children)) walk(n.children);
+        }
+      };
+      if (Array.isArray(tree)) walk(tree);
+      setBackendSkillMap(map);
+    }).catch(() => {});
+  }, [isAuthed]);
+
+  const syncBackendSkill = async (skill: Skill, markCompleted: boolean) => {
+    if (!isAuthed) return;
+    // resolve backend UUID if available, otherwise skip backend sync and rely on local + profile refresh fallback
+    const keyFull = `${skill.name.toLowerCase()}::${skill.category.toLowerCase()}`;
+    const backendId = backendSkillMap.get(keyFull) || backendSkillMap.get(skill.name.toLowerCase()) || null;
+    if (!backendId) return;
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(backendId)) return;
+    try {
+      if (markCompleted) {
+        await api.skills.upsertMySkill({ skillId: backendId, rankTier: skill.rankTier || "BRONZE" });
+      } else {
+        await api.skills.removeMySkill(backendId);
+      }
+      // Fetch updated profile and broadcast so profile page + badges update instantly without refresh
+      try {
+        const profile = await api.profiles.getMe();
+        // persist to storage for ProfileMenu/badge listeners
+        if (profile) {
+          window.dispatchEvent(new CustomEvent("sidequest_auth_changed"));
+          window.dispatchEvent(new CustomEvent("sidequest_skill_progression", { detail: profile }));
+          window.dispatchEvent(new CustomEvent("sidequest_avatar_changed"));
+        }
+      } catch {}
+    } catch (e) {
+      console.warn("Skill backend sync failed, keeping local state", e);
+    }
+  };
+
   const toggleDone = (skill: Skill) => {
     if (!completed.has(skill.id) && !isUnlocked(skill)) return;
-    const next = completed.has(skill.id) ? completedSkillIds.filter((id) => id !== skill.id) : [...completedSkillIds, skill.id];
-    setCompletedSkillIds(next); saveCompletedSkillIds(next);
+    const willComplete = !completed.has(skill.id);
+    const next = willComplete ? [...completedSkillIds, skill.id] : completedSkillIds.filter((id) => id !== skill.id);
+    setCompletedSkillIds(next);
+    saveCompletedSkillIds(next);
+    // broadcast local progression instantly
+    try {
+      window.dispatchEvent(new CustomEvent("sidequest_skill_progression", { detail: { completedCount: next.length, completedIds: next } }));
+      window.dispatchEvent(new CustomEvent("sidequest_auth_changed"));
+    } catch {}
+    // sync to backend for rank/badges recalculation
+    syncBackendSkill(skill, willComplete);
   };
   const addSkillGoal = (skill: Skill) => { if (goals.some((goal) => goal.skillId === skill.id)) return; const next = [...goals, { id: `skill-${skill.id}`, skillId: skill.id, title: skill.name, completed: completed.has(skill.id) }]; setGoals(next); saveGoals(next); };
   const updateGoals = (next: UserGoal[]) => { setGoals(next); saveGoals(next); };
@@ -136,7 +210,7 @@ function SkillsPageContent() {
                   <h2 className="text-sm font-semibold text-slate-900 dark:text-[#ededed]">All skills</h2>
                   <p className="text-xs text-slate-500 dark:text-zinc-400">Browse every node in your skill matrix, organized by discipline.</p>
                 </div>
-                <span className="rounded-full bg-[#3ecf8e]/10 px-2.5 py-1 text-xs font-semibold text-[#21875c] dark:text-[#3ecf8e]">{mockSkills.length} skills</span>
+                <span className="rounded-full bg-[#3ecf8e]/10 px-2.5 py-1 text-xs font-semibold text-[#21875c] dark:text-[#3ecf8e]">{counterLabel}</span>
               </div>
               <div className="mb-4 flex flex-wrap gap-2">
                 <button type="button" onClick={() => setSelectedCategories([])} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${selectedCategories.length === 0 ? "bg-[#3ecf8e] text-[#042f1a]" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-[#232323] dark:text-zinc-300"}`}>All</button>
@@ -144,9 +218,18 @@ function SkillsPageContent() {
               </div>
               <input value={skillQuery} onChange={(event) => setSkillQuery(event.target.value)} placeholder="Search skills or categories…" className="mb-4 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-[#3ecf8e] dark:border-[#383838] dark:bg-[#161616]" />
               <div className="grid gap-4 md:grid-cols-3">
-                {Object.entries(skillsByCategory).map(([category, skills]) => (
+                {Object.entries(skillsByCategory).map(([category, skills]) => {
+                  const totalCat = mockSkills.filter((s) => s.category === category).length;
+                  const completedCat = completedSkillIds.filter((id) => {
+                    const m = mockSkills.find((mm) => mm.id === id);
+                    return m?.category === category;
+                  }).length;
+                  return (
                   <div key={category} className="min-w-0 rounded-lg border border-slate-100 bg-slate-50/70 p-3 dark:border-[#282828] dark:bg-[#161616]">
-                    <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-zinc-300">{category}</h3>
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-zinc-300">{category}</h3>
+                      <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-[#232323] dark:text-zinc-400">{completedCat}/{totalCat}</span>
+                    </div>
                     <div className="space-y-2">
                       {skills.map((skill) => (
                         <div key={skill.id} className="rounded px-1 py-1 hover:bg-white dark:hover:bg-[#202020]">
@@ -159,7 +242,8 @@ function SkillsPageContent() {
                       ))}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               {Object.keys(skillsByCategory).length === 0 && <p className="py-5 text-center text-xs text-slate-500 dark:text-zinc-400">No skills match that search.</p>}
             </section>

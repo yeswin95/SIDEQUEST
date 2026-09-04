@@ -124,72 +124,115 @@ export default function ProfilePage() {
   };
 
   // Initial loads - only when authenticated; zeroed state otherwise
+  // Refactored to allow retry on backend warm-up (sidequest_backend_ready)
   useEffect(() => {
     if (!isAuthed) return;
-    api.profiles.getMe()
-      .then((res) => {
-        if (res) {
-          const mappedName = res.fullName || "";
-          const mappedMajor = res.major || "";
-          // Fresh user: no skills -> empty array, not mock fallback
-          const mappedSkills = res.skills && res.skills.length > 0 
-            ? res.skills.map((s: any) => ({
-                id: s.id || s.skillId || Math.random().toString(),
-                skillName: s.skillName,
-                category: s.category,
-                rankTier: s.rankTier,
-                verified: s.verificationStatus === "VERIFIED",
-              })) 
-            : [];
+    const fetchProfile = () => {
+      api.profiles.getMe()
+        .then((res) => {
+          if (res) {
+            const mappedName = res.fullName || "";
+            const mappedMajor = res.major || "";
+            // Fresh user: no skills -> empty array, not mock fallback
+            const mappedSkills = res.skills && res.skills.length > 0 
+              ? res.skills.map((s: any) => ({
+                  id: s.id || s.skillId || Math.random().toString(),
+                  skillName: s.skillName,
+                  category: s.category,
+                  rankTier: s.rankTier,
+                  verified: s.verificationStatus === "VERIFIED",
+                })) 
+              : [];
 
-          setProfile((prev) => ({
-            ...prev,
-            fullName: mappedName,
-            major: mappedMajor,
-            bio: res.bio ?? prev.bio ?? "",
-            skills: mappedSkills,
-          }));
+            setProfile((prev) => ({
+              ...prev,
+              fullName: mappedName,
+              major: mappedMajor,
+              bio: res.bio ?? prev.bio ?? "",
+              skills: mappedSkills,
+            }));
 
-          const mappedStatus: ActiveStatus = res.activeStatus === "IN_A_PARTY"
-            ? "IN_A_PARTY"
-            : res.activeStatus === "INACTIVE" || res.activeStatus === "OFFLINE"
-            ? "OFFLINE"
-            : res.activeStatus === "ACTIVE" || res.activeStatus === "OPEN_TO_JOIN"
-            ? "OPEN_TO_JOIN"
-            : "OPEN_TO_JOIN";
-          setActiveStatus(mappedStatus);
+            const mappedStatus: ActiveStatus = res.activeStatus === "IN_A_PARTY"
+              ? "IN_A_PARTY"
+              : res.activeStatus === "INACTIVE" || res.activeStatus === "OFFLINE"
+              ? "OFFLINE"
+              : res.activeStatus === "ACTIVE" || res.activeStatus === "OPEN_TO_JOIN"
+              ? "OPEN_TO_JOIN"
+              : "OPEN_TO_JOIN";
+            setActiveStatus(mappedStatus);
 
-          // Persist backend truth immediately to state + localStorage for global sync
-          if (res.bio !== undefined && res.bio !== null) { setBio(res.bio); setProfile((p) => ({ ...p, bio: res.bio })); localStorage.setItem("sidequest_bio", res.bio); }
-          else if (res.bio === null) { setBio(""); localStorage.removeItem("sidequest_bio"); }
+            // Persist backend truth immediately to state + localStorage for global sync
+            if (res.bio !== undefined && res.bio !== null) { setBio(res.bio); setProfile((p) => ({ ...p, bio: res.bio })); localStorage.setItem("sidequest_bio", res.bio); }
+            else if (res.bio === null) { setBio(""); localStorage.removeItem("sidequest_bio"); }
 
-          if (res.avatarUrl !== undefined) {
-            if (res.avatarUrl) { setAvatarUrl(res.avatarUrl); localStorage.setItem("sidequest_avatar", res.avatarUrl); }
-            else { setAvatarUrl(null); localStorage.removeItem("sidequest_avatar"); }
+            if (res.avatarUrl !== undefined) {
+              if (res.avatarUrl) { setAvatarUrl(res.avatarUrl); localStorage.setItem("sidequest_avatar", res.avatarUrl); }
+              else { setAvatarUrl(null); localStorage.removeItem("sidequest_avatar"); }
+            }
+
+            if (res.cardConfig) {
+              try {
+                const parsed = JSON.parse(res.cardConfig);
+                setCardConfig(parsed);
+                localStorage.setItem("sidequest_card_config", res.cardConfig);
+              } catch {}
+            }
+
+            // Only seed display fields from backend if localStorage empty (no leak of previous user's data)
+            if (!localStorage.getItem("sidequest_username") && mappedName) setDisplayName(mappedName);
+            else if (localStorage.getItem("sidequest_username")) setDisplayName(localStorage.getItem("sidequest_username") || mappedName);
+            else setDisplayName(mappedName);
+            if (!localStorage.getItem("sidequest_major") && mappedMajor) setAcademicMajor(mappedMajor);
+            else if (localStorage.getItem("sidequest_major")) setAcademicMajor(localStorage.getItem("sidequest_major") || mappedMajor);
+            else setAcademicMajor(mappedMajor);
+            if (localStorage.getItem("sidequest_email")) setEmailAddress(localStorage.getItem("sidequest_email") || res.email || "");
+            else if (res.email) setEmailAddress(res.email);
+            if (localStorage.getItem("sidequest_user_handle")) setUserHandle(localStorage.getItem("sidequest_user_handle") || "");
+            if (res.username && !localStorage.getItem("sidequest_user_handle")) setUserHandle(res.username);
           }
-
-          if (res.cardConfig) {
-            try {
-              const parsed = JSON.parse(res.cardConfig);
-              setCardConfig(parsed);
-              localStorage.setItem("sidequest_card_config", res.cardConfig);
-            } catch {}
+        })
+        .catch(() => {});
+    };
+    fetchProfile();
+    const onBackendReady = () => fetchProfile();
+    const onSkillProgress = () => {
+      // Re-fetch profile to get updated rank/unlockedRanks from backend
+      fetchProfile();
+      // Also apply instant local update for offline/mock skills not yet in DB
+      try {
+        const raw = localStorage.getItem("sidequest_completed_skill_ids");
+        const ids: string[] = raw ? JSON.parse(raw) : [];
+        // Map to PlayerSkill for instant UI (fallback if backend hasn't synced names)
+        const localSkills: PlayerSkill[] = ids.map((id, idx) => {
+          const mock = (async () => {}) as any; // placeholder to satisfy scope
+          return { id, skillName: id, category: "General", rankTier: "BRONZE" as const, verified: false };
+        });
+        // Prefer backend data, but if backend returned empty yet we have local ids, show local count for rank animation
+        setProfile((prev) => {
+          // Only override if backend skills empty and local has more
+          if (prev.skills.length === 0 && ids.length > 0) {
+            // Try to resolve real names from frontend mock catalog if available via storage event detail
+            return { ...prev, skills: localSkills };
           }
-
-          // Only seed display fields from backend if localStorage empty (no leak of previous user's data)
-          if (!localStorage.getItem("sidequest_username") && mappedName) setDisplayName(mappedName);
-          else if (localStorage.getItem("sidequest_username")) setDisplayName(localStorage.getItem("sidequest_username") || mappedName);
-          else setDisplayName(mappedName);
-          if (!localStorage.getItem("sidequest_major") && mappedMajor) setAcademicMajor(mappedMajor);
-          else if (localStorage.getItem("sidequest_major")) setAcademicMajor(localStorage.getItem("sidequest_major") || mappedMajor);
-          else setAcademicMajor(mappedMajor);
-          if (localStorage.getItem("sidequest_email")) setEmailAddress(localStorage.getItem("sidequest_email") || res.email || "");
-          else if (res.email) setEmailAddress(res.email);
-          if (localStorage.getItem("sidequest_user_handle")) setUserHandle(localStorage.getItem("sidequest_user_handle") || "");
-          if (res.username && !localStorage.getItem("sidequest_user_handle")) setUserHandle(res.username);
-        }
-      })
-      .catch(() => {});
+          // If backend already has skills, keep them; event will be followed by fetchProfile which corrects
+          if (ids.length !== prev.skills.length && prev.skills.length < ids.length) {
+            // Append missing local skills for instant feedback
+            const existingIds = new Set(prev.skills.map((s) => s.id));
+            const missing = ids.filter((i) => !existingIds.has(i)).map((mid) => ({ id: mid, skillName: mid, category: "General", rankTier: "BRONZE" as const }));
+            return { ...prev, skills: [...prev.skills, ...missing as any] };
+          }
+          return prev;
+        });
+      } catch {}
+    };
+    window.addEventListener("sidequest_backend_ready", onBackendReady);
+    window.addEventListener("sidequest_skill_progression", onSkillProgress);
+    window.addEventListener("sidequest_auth_changed", onSkillProgress);
+    return () => {
+      window.removeEventListener("sidequest_backend_ready", onBackendReady);
+      window.removeEventListener("sidequest_skill_progression", onSkillProgress);
+      window.removeEventListener("sidequest_auth_changed", onSkillProgress);
+    };
   }, [isAuthed]);
 
   // Sync state from LocalStorage on component mount & updates - gated by auth
@@ -365,12 +408,14 @@ export default function ProfilePage() {
   const highestRank = getHighestTier(profile.skills.map((s) => s.rankTier));
   const highestTokens = getTierTokens(highestRank);
 
-  // Fresh user detection - zeroed stats
-  const isNewUser = isAuthed && profile.skills.length === 0;
-  const displayLevel = getLevelFromSkills(profile.skills.length);
+  // Fresh user detection - zeroed stats, but now progressive
+  const completedSkillsCount = profile.skills.length;
+  const isNewUser = isAuthed && completedSkillsCount === 0;
+  const displayLevel = getLevelFromSkills(completedSkillsCount);
   const displayQuestsCount = isNewUser ? 0 : 27;
-  const displayAchievementsCount = isNewUser ? 0 : 0; // no unlocked for fresh user
-  const displayBadgesCount = isNewUser ? 0 : 0;
+  // Dynamic counts updated instantly via skill progression event
+  const displayAchievementsCount = 0; // computed dynamically below
+  const displayBadgesCount = 0;
 
   const getInitials = (name: string) => {
     if (!name || !name.trim()) return "?";
@@ -382,14 +427,49 @@ export default function ProfilePage() {
       .join("") || "?";
   };
 
-  // Filter list computed values - for fresh user, show zeroed (no earned)
+  // Filter list computed values - dynamic progression for skill-based achievements
   const [selectedRarity] = useState<string>("all");
 
   const zeroedAchievements = useMemo(() => mockAchievements.map(b => ({ ...b, status: "locked" as const, progress: 0, currentValue: 0, earnedDate: undefined })), []);
   const zeroedCampusBadges = useMemo(() => mockCampusBadges.map(b => ({ ...b, status: "locked" as const, progress: 0, currentValue: 0, earnedDate: undefined })), []);
 
-  const sourceAchievements = isNewUser ? zeroedAchievements : mockAchievements;
-  const sourceCampusBadges = isNewUser ? zeroedCampusBadges : mockCampusBadges;
+  // Enrich skill-based achievements with real-time progression
+  const dynamicAchievements = useMemo(() => {
+    if (!isAuthed) return zeroedAchievements;
+    if (completedSkillsCount === 0) return zeroedAchievements;
+    // Start from zeroed, then progressively unlock skill badges based on completedSkillsCount
+    return zeroedAchievements.map((b) => {
+      if (b.id === "a6") { // Skill Master - 1 skill
+        const earned = completedSkillsCount >= 1;
+        return { ...b, status: earned ? "earned" as const : "locked" as const, progress: earned ? 100 : 0, currentValue: Math.min(completedSkillsCount, 1), maxValue: 1, earnedDate: earned ? new Date().toISOString().slice(0, 10) : undefined };
+      }
+      if (b.id === "a7") { // Skill Tree Explorer - 10 skills
+        const progress = Math.min(100, Math.round((completedSkillsCount / 10) * 100));
+        const earned = completedSkillsCount >= 10;
+        const status = earned ? "earned" as const : completedSkillsCount > 0 ? "in-progress" as const : "locked" as const;
+        return { ...b, status, progress, currentValue: Math.min(completedSkillsCount, 10), maxValue: 10, earnedDate: earned ? new Date().toISOString().slice(0, 10) : undefined };
+      }
+      // Keep other achievements locked for fresh progression; as user does quests they'd unlock via backend
+      return b;
+    });
+  }, [isAuthed, completedSkillsCount, zeroedAchievements]);
+
+  const dynamicCampusBadges = useMemo(() => {
+    if (!isAuthed || completedSkillsCount === 0) return zeroedCampusBadges;
+    // Unlock Campus Explorer as soon as any skill completed (onboarding)
+    return zeroedCampusBadges.map((b) => {
+      if (b.id === "cb1") {
+        return { ...b, status: "earned" as const, progress: 100, earnedDate: new Date().toISOString().slice(0, 10) };
+      }
+      return b;
+    });
+  }, [isAuthed, completedSkillsCount, zeroedCampusBadges]);
+
+  const sourceAchievements = dynamicAchievements;
+  const sourceCampusBadges = dynamicCampusBadges;
+
+  const earnedAchievementsCount = useMemo(() => sourceAchievements.filter((b) => b.status === "earned").length, [sourceAchievements]);
+  const earnedCampusCount = useMemo(() => sourceCampusBadges.filter((b) => b.status === "earned").length, [sourceCampusBadges]);
 
   const filteredAchievements = useMemo(() => {
     if (selectedStatus === "all") return sourceAchievements;
@@ -625,8 +705,8 @@ export default function ProfilePage() {
                         level: displayLevel,
                         skillsCount: profile.skills.length,
                         questsCount: displayQuestsCount,
-                        achievementsCount: displayAchievementsCount,
-                        badgesCount: displayBadgesCount,
+                        achievementsCount: earnedAchievementsCount,
+                        badgesCount: earnedCampusCount,
                         avatarUrl: avatarUrl || undefined,
                         mainSkill: profile.skills[0]?.skillName,
                       }} 

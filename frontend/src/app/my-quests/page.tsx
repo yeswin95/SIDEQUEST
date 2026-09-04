@@ -70,7 +70,7 @@ export default function MyQuestsPage() {
       setError("Quest management is unavailable until you sign in to the SideQuest backend.");
     } finally { setLoading(false); }
   };
-  useEffect(() => { load(); const h = () => load(); window.addEventListener('sidequest_auth_changed', h); window.addEventListener('storage', h); return () => { window.removeEventListener('sidequest_auth_changed', h); window.removeEventListener('storage', h); }; }, []);
+  useEffect(() => { load(); const h = () => load(); window.addEventListener('sidequest_auth_changed', h); window.addEventListener('storage', h); window.addEventListener('sidequest_backend_ready', h); return () => { window.removeEventListener('sidequest_auth_changed', h); window.removeEventListener('storage', h); window.removeEventListener('sidequest_backend_ready', h); }; }, []);
   // Task 3: Direct navigation from feed's View Applications button
   useEffect(() => {
     if (loading || posted.length === 0) return;

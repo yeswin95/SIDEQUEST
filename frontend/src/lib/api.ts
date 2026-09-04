@@ -148,6 +148,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    removeMySkill: (skillId: string) =>
+      request<void>(`/skills/me/${skillId}`, {
+        method: 'DELETE',
+      }),
   },
   projects: {
     create: (data: { title: string; description: string; repoLink?: string; roles: Array<{ roleTitle: string; spotCount: number; requiredSkillIds?: string[] }> }) =>

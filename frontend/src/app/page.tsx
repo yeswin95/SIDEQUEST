@@ -159,9 +159,11 @@ export default function HomePage() {
   useEffect(() => {
     fetchPosts();
     const handleAuth = () => fetchPosts();
+    const handleBackendReady = () => fetchPosts();
     window.addEventListener('sidequest_auth_changed', handleAuth);
     window.addEventListener('storage', handleAuth);
-    return () => { window.removeEventListener('sidequest_auth_changed', handleAuth); window.removeEventListener('storage', handleAuth); };
+    window.addEventListener('sidequest_backend_ready', handleBackendReady);
+    return () => { window.removeEventListener('sidequest_auth_changed', handleAuth); window.removeEventListener('storage', handleAuth); window.removeEventListener('sidequest_backend_ready', handleBackendReady); };
   }, []);
 
   useEffect(() => {

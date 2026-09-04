@@ -5,6 +5,7 @@ import { User, CreditCard, Sliders, LogOut, Info } from "lucide-react";
 import { api, removeStoredToken, getStoredToken } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { getLevelFromSkills } from "@/lib/tierConfig";
+import LogoutConfirmModal from "@/components/LogoutConfirmModal";
 
 interface ProfileMenuProps {
   onClose: () => void;
@@ -59,7 +60,11 @@ export default function ProfileMenu({ onClose, onCustomizeCard }: ProfileMenuPro
     };
   }, []);
 
-  const handleLogout = () => {
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const handleLogout = () => setShowLogoutConfirm(true);
+
+  const confirmLogout = () => {
     removeStoredToken();
     localStorage.removeItem("sidequest_username");
     localStorage.removeItem("sidequest_user_handle");
@@ -67,10 +72,22 @@ export default function ProfileMenu({ onClose, onCustomizeCard }: ProfileMenuPro
     localStorage.removeItem("sidequest_major");
     localStorage.removeItem("sidequest_avatar");
     localStorage.removeItem("sidequest_card_config");
-    window.location.reload();
+    localStorage.removeItem("sidequest_completed_skill_ids");
+    localStorage.removeItem("sidequest_next_goals");
+    window.dispatchEvent(new CustomEvent("sidequest_auth_changed"));
+    window.dispatchEvent(new CustomEvent("sidequest_avatar_changed"));
+    setShowLogoutConfirm(false);
+    onClose();
+    // Redirect to login as per spec, fallback to reload if already there
+    if (window.location.pathname === "/login") {
+      window.location.reload();
+    } else {
+      window.location.href = "/login";
+    }
   };
 
   return (
+    <>
     <div 
       className="absolute right-0 top-12 z-50 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-[#282828] dark:bg-[#1c1c1c] animate-in fade-in slide-in-from-top-2 duration-150"
       onClick={(e) => e.stopPropagation()}
@@ -132,5 +149,7 @@ export default function ProfileMenu({ onClose, onCustomizeCard }: ProfileMenuPro
         </button>
       </div>
     </div>
+    <LogoutConfirmModal isOpen={showLogoutConfirm} onCancel={() => setShowLogoutConfirm(false)} onConfirm={confirmLogout} />
+    </>
   );
 }

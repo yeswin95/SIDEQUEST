@@ -3,10 +3,13 @@ package com.sidequest.service;
 import com.sidequest.dto.request.UpsertUserSkillRequest;
 import com.sidequest.dto.response.SkillNodeDTO;
 import com.sidequest.dto.response.UserSkillDTO;
+import com.sidequest.entity.Profile;
 import com.sidequest.entity.Skill;
 import com.sidequest.entity.User;
 import com.sidequest.entity.UserSkill;
+import com.sidequest.enums.SkillRank;
 import com.sidequest.exception.ResourceNotFoundException;
+import com.sidequest.repository.ProfileRepository;
 import com.sidequest.repository.SkillRepository;
 import com.sidequest.repository.UserSkillRepository;
 import com.sidequest.security.CurrentUserService;
@@ -27,6 +30,7 @@ public class SkillService {
     private final CurrentUserService currentUserService;
     private final SkillRepository skillRepository;
     private final UserSkillRepository userSkillRepository;
+    private final ProfileRepository profileRepository;
 
     @Transactional(readOnly = true)
     public List<SkillNodeDTO> getSkillTree() {
@@ -79,7 +83,39 @@ public class SkillService {
                         .build());
 
         UserSkill saved = userSkillRepository.save(userSkill);
+
+        // Recalculate rank progression immediately and persist to profile
+        // Thresholds: BRONZE 0, SILVER 3, GOLD 6, PLATINUM 10, DIAMOND 15 (sync with frontend tierConfig)
+        recalculateAndPersistRank(user);
+
         return toUserSkillDTO(saved);
+    }
+
+    private void recalculateAndPersistRank(User user) {
+        long completedCount = userSkillRepository.findByUserIdWithSkill(user.getId()).size();
+        SkillRank computedRank = computeRank((int) completedCount);
+        Profile profile = profileRepository.findById(user.getId()).orElse(null);
+        if (profile != null && computedRank.ordinal() > profile.getRankTier().ordinal()) {
+            profile.setRankTier(computedRank);
+            profileRepository.save(profile);
+        }
+    }
+
+    private SkillRank computeRank(int unlockedCount) {
+        if (unlockedCount >= 15) return SkillRank.DIAMOND;
+        if (unlockedCount >= 10) return SkillRank.PLATINUM;
+        if (unlockedCount >= 6) return SkillRank.GOLD;
+        if (unlockedCount >= 3) return SkillRank.SILVER;
+        return SkillRank.BRONZE;
+    }
+
+    @Transactional
+    public void removeMySkill(UUID skillId) {
+        User user = currentUserService.getCurrentUser();
+        userSkillRepository.findByUser_IdAndSkill_Id(user.getId(), skillId)
+                .ifPresent(userSkillRepository::delete);
+        // Recalculate rank after removal (downgrade not applied - rank stays at highest achieved)
+        // But badges progress will reflect current count on next profile fetch
     }
 
     private UserSkillDTO toUserSkillDTO(UserSkill userSkill) {
