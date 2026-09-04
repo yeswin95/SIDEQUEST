@@ -8,6 +8,32 @@
 
 const API_BASE = '/api/v1';
 
+// ---------------------------------------------------------------------------
+// Retry / cold-start handling — Render free tier can take 30-60s to wake up.
+// Retry on 502/503/504 or network/timeout errors up to 3 times with delay.
+// ---------------------------------------------------------------------------
+const RETRYABLE_STATUSES = new Set([502, 503, 504]);
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2500;
+const REQUEST_TIMEOUT_MS = 15000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableStatus(status: number): boolean {
+  return RETRYABLE_STATUSES.has(status);
+}
+
+function isNetworkError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') return true;
+  if (error instanceof TypeError) {
+    const msg = (error.message || '').toLowerCase();
+    return msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed') || msg.includes('network');
+  }
+  return false;
+}
+
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('sidequest_jwt_token');
@@ -36,26 +62,61 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const url = `${API_BASE}${endpoint}`;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API Error ${response.status}: ${errorText || response.statusText}`);
-  }
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    // Allow caller-provided signal to also abort
+    const callerSignal = options.signal as AbortSignal | undefined;
+    if (callerSignal) {
+      if (callerSignal.aborted) controller.abort();
+      else callerSignal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
 
-  if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return undefined as unknown as T;
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        if (isRetryableStatus(response.status) && attempt < MAX_RETRIES) {
+          await sleep(RETRY_DELAY_MS);
+          continue;
+        }
+        const errorText = await response.text();
+        throw new Error(`API Error ${response.status}: ${errorText || response.statusText}`);
+      }
+
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return undefined as unknown as T;
+      }
+      const text = await response.text();
+      if (!text) return undefined as unknown as T;
+      try {
+        return JSON.parse(text) as T;
+      } catch {
+        return undefined as unknown as T;
+      }
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+      const retryable = isNetworkError(error) || (error instanceof Error && error.message.startsWith('API Error 50'));
+      // Also catch explicit retryable status already handled above; here handle network/timeout
+      if (retryable && attempt < MAX_RETRIES) {
+        // Don't retry on explicit 4xx client errors that slipped through as Error with 4xx — those are not retryable
+        if (error instanceof Error && /^API Error (4\d\d):/.test(error.message)) {
+          throw error;
+        }
+        await sleep(RETRY_DELAY_MS);
+        continue;
+      }
+      throw error;
+    }
   }
-  const text = await response.text();
-  if (!text) return undefined as unknown as T;
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return undefined as unknown as T;
-  }
+  throw new Error('API request failed after retries');
 }
 
 export const api = {

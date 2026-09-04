@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/", "/actuator/**", "/api/v1/auth/**").permitAll();
+                    auth.requestMatchers("/", "/health", "/api/health", "/actuator/**", "/api/v1/auth/**").permitAll();
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/admin/purge").permitAll();
                     if (isDev) {
                         auth.requestMatchers("/h2-console/**").permitAll();

@@ -27,10 +27,24 @@ const nextConfig = {
     } catch {}
     if (!backendBase) backendBase = 'http://localhost:8080';
     const dest = backendBase.endsWith('/api/v1') ? `${backendBase}/:path*` : `${backendBase}/api/v1/:path*`;
+    // Lightweight health endpoint — not under /api/v1, needs its own rewrite
+    const healthDest = backendBase.endsWith('/api/health')
+      ? backendBase
+      : backendBase.endsWith('/api/v1')
+        ? backendBase.replace(/\/api\/v1\/?$/, '/api/health')
+        : `${backendBase}/api/health`;
     return [
       {
         source: '/api/v1/:path*',
         destination: dest,
+      },
+      {
+        source: '/api/health',
+        destination: healthDest,
+      },
+      {
+        source: '/health',
+        destination: healthDest,
       },
     ];
   },
