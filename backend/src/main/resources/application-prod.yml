@@ -5,12 +5,19 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:}}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: ${DB_POOL_SIZE:10}
-      minimum-idle: 2
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: 1
       connection-timeout: 30000
       idle-timeout: 300000
-      max-lifetime: 900000
+      max-lifetime: 600000
       auto-commit: false
+      # Supabase pgbouncer (transaction mode, 6543) does not support server-prepared statements
+      # Disable server-prepared statement cache to fix "prepared statement S_1/S_2 already exists"
+      data-source-properties:
+        prepareThreshold: 0
+        preparedStatementCacheQueries: 0
+        preparedStatementCacheSizeMiB: 0
+        preferQueryMode: simple
   jpa:
     hibernate:
       ddl-auto: update

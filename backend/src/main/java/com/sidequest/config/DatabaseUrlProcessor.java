@@ -55,6 +55,17 @@ public class DatabaseUrlProcessor implements EnvironmentPostProcessor {
                 if (!jdbc.contains("sslmode=")) {
                     jdbc += (jdbc.contains("?") ? "&" : "?") + "sslmode=require";
                 }
+                // Supabase pgbouncer Transaction pooler (6543) fix: disable server-prepared statements
+                // "prepared statement S_1 already exists" -> add prepareThreshold=0 & preferQueryMode=simple
+                if (!jdbc.contains("prepareThreshold=")) {
+                    jdbc += (jdbc.contains("?") ? "&" : "?") + "prepareThreshold=0";
+                }
+                if (!jdbc.contains("preferQueryMode=")) {
+                    jdbc += (jdbc.contains("?") ? "&" : "?") + "preferQueryMode=simple";
+                }
+                if (!jdbc.contains("preparedStatementCacheQueries=")) {
+                    jdbc += (jdbc.contains("?") ? "&" : "?") + "preparedStatementCacheQueries=0";
+                }
                 return jdbc;
             }
             return null;
