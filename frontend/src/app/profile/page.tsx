@@ -6,8 +6,9 @@ import Sidebar from "@/components/Sidebar";
 import PlayerProfileCard, { PlayerSkill, ActiveStatus } from "@/components/PlayerProfileCard";
 import ConnectedHandles from "@/components/ConnectedHandles";
 import BadgeGrid from "@/components/achievements/BadgeGrid";
-import { mockAchievements, mockCampusBadges } from "@/lib/skillsData";
+import { mockAchievements, mockCampusBadges, mockSkills } from "@/lib/skillsData";
 import { api, getStoredToken } from "@/lib/api";
+import { loadCompletedSkillIds } from "@/lib/skillState";
 import { User, Camera, Trash2, Edit2, CreditCard, Lock } from "lucide-react";
 import MetalPlayerCard, { PlayerCardConfig } from "@/components/MetalPlayerCard";
 import CardCustomizationModal from "@/components/CardCustomizationModal";
@@ -69,19 +70,33 @@ export default function ProfilePage() {
 
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
+  // Local fallback for instant rank/badges before backend syncs (skills page writes sidequest_completed_skill_ids)
+  const [localSkillIds, setLocalSkillIds] = useState<string[]>(() => {
+    try {
+      return loadCompletedSkillIds([]);
+    } catch {
+      return [];
+    }
+  });
+
   // Bio state and editing draft state
   const [bio, setBio] = useState<string>("");
   const [draftBio, setDraftBio] = useState<string>("");
 
-  // Auth check
+  // Auth check + local skill sync
   useEffect(() => {
-    const checkAuth = () => setIsAuthed(!!getStoredToken());
-    checkAuth();
-    window.addEventListener("sidequest_auth_changed", checkAuth);
-    window.addEventListener("storage", checkAuth);
+    const syncAuthAndLocal = () => {
+      setIsAuthed(!!getStoredToken());
+      try { setLocalSkillIds(loadCompletedSkillIds([])); } catch {}
+    };
+    syncAuthAndLocal();
+    window.addEventListener("sidequest_auth_changed", syncAuthAndLocal);
+    window.addEventListener("sidequest_skill_progression", syncAuthAndLocal);
+    window.addEventListener("storage", syncAuthAndLocal);
     return () => {
-      window.removeEventListener("sidequest_auth_changed", checkAuth);
-      window.removeEventListener("storage", checkAuth);
+      window.removeEventListener("sidequest_auth_changed", syncAuthAndLocal);
+      window.removeEventListener("sidequest_skill_progression", syncAuthAndLocal);
+      window.removeEventListener("storage", syncAuthAndLocal);
     };
   }, []);
   const openAuth = (tab: "signin" | "signup") => { setAuthInitialTab(tab); setAuthModalOpen(true); };
@@ -195,36 +210,7 @@ export default function ProfilePage() {
     };
     fetchProfile();
     const onBackendReady = () => fetchProfile();
-    const onSkillProgress = () => {
-      // Re-fetch profile to get updated rank/unlockedRanks from backend
-      fetchProfile();
-      // Also apply instant local update for offline/mock skills not yet in DB
-      try {
-        const raw = localStorage.getItem("sidequest_completed_skill_ids");
-        const ids: string[] = raw ? JSON.parse(raw) : [];
-        // Map to PlayerSkill for instant UI (fallback if backend hasn't synced names)
-        const localSkills: PlayerSkill[] = ids.map((id, idx) => {
-          const mock = (async () => {}) as any; // placeholder to satisfy scope
-          return { id, skillName: id, category: "General", rankTier: "BRONZE" as const, verified: false };
-        });
-        // Prefer backend data, but if backend returned empty yet we have local ids, show local count for rank animation
-        setProfile((prev) => {
-          // Only override if backend skills empty and local has more
-          if (prev.skills.length === 0 && ids.length > 0) {
-            // Try to resolve real names from frontend mock catalog if available via storage event detail
-            return { ...prev, skills: localSkills };
-          }
-          // If backend already has skills, keep them; event will be followed by fetchProfile which corrects
-          if (ids.length !== prev.skills.length && prev.skills.length < ids.length) {
-            // Append missing local skills for instant feedback
-            const existingIds = new Set(prev.skills.map((s) => s.id));
-            const missing = ids.filter((i) => !existingIds.has(i)).map((mid) => ({ id: mid, skillName: mid, category: "General", rankTier: "BRONZE" as const }));
-            return { ...prev, skills: [...prev.skills, ...missing as any] };
-          }
-          return prev;
-        });
-      } catch {}
-    };
+    const onSkillProgress = () => fetchProfile();
     window.addEventListener("sidequest_backend_ready", onBackendReady);
     window.addEventListener("sidequest_skill_progression", onSkillProgress);
     window.addEventListener("sidequest_auth_changed", onSkillProgress);
@@ -280,8 +266,13 @@ export default function ProfilePage() {
           setCardConfig(JSON.parse(storedConfig));
         } catch (e) {}
       } else {
-        // Fresh user Bronze fallback, not PLATINUM mock
-        const highest = getHighestTier(profile.skills.map((s) => s.rankTier));
+        // Fresh user Bronze fallback, not PLATINUM mock - include local progression
+        const localRanks = localSkillIds.map((id) => {
+          const m = mockSkills.find((mm) => mm.id === id);
+          return (m?.rankTier as any) || "BRONZE";
+        });
+        const combinedRanks = [...profile.skills.map((s) => s.rankTier), ...localRanks] as any[];
+        const highest = getHighestTier(combinedRanks);
         setCardConfig((prev) => ({ ...prev, tier: highest }));
       }
     };
@@ -299,7 +290,7 @@ export default function ProfilePage() {
     return () => {
       window.removeEventListener("sidequest_open_card_customizer", handleOpenCustomizer);
     };
-  }, [profile.skills, isAuthed]);
+  }, [profile.skills, isAuthed, localSkillIds]);
 
   // Scroll to anchored sections when navigating via hash (e.g., from Sidebar > Verified Badges or ProfileMenu > Account Details)
   useEffect(() => {
@@ -405,11 +396,33 @@ export default function ProfilePage() {
     persistProfileFields({ fullName: currentFullName, major: currentMajor, activeStatus: statusMapping } as any);
   };
 
-  const highestRank = getHighestTier(profile.skills.map((s) => s.rankTier));
+  // Effective skill list = backend skills union local mock IDs (instant, survives navigation)
+  const effectiveSkills: PlayerSkill[] = useMemo(() => {
+    if (!isAuthed) return [];
+    const backendSkills = profile.skills;
+    if (localSkillIds.length === 0) return backendSkills;
+    // Build dedup by normalized skillName lowercased (backend uses real names, local uses mock ids which may be slugs)
+    const backendNames = new Set(backendSkills.map((s) => s.skillName.toLowerCase()));
+    const backendIds = new Set(backendSkills.map((s) => String(s.id).toLowerCase()));
+    const missingLocal: PlayerSkill[] = [];
+    for (const mockId of localSkillIds) {
+      const normalized = String(mockId).toLowerCase();
+      if (backendIds.has(normalized)) continue;
+      const mock = mockSkills.find((m) => m.id.toLowerCase() === normalized);
+      const skillName = mock ? mock.name : mockId;
+      const category = mock ? mock.category : "General";
+      const rankTier = (mock?.rankTier as any) || "BRONZE";
+      if (backendNames.has(skillName.toLowerCase())) continue;
+      missingLocal.push({ id: mockId, skillName, category, rankTier, verified: false });
+    }
+    return [...backendSkills, ...missingLocal];
+  }, [isAuthed, profile.skills, localSkillIds]);
+
+  const highestRank = getHighestTier(effectiveSkills.map((s) => s.rankTier));
   const highestTokens = getTierTokens(highestRank);
 
   // Fresh user detection - zeroed stats, but now progressive
-  const completedSkillsCount = profile.skills.length;
+  const completedSkillsCount = effectiveSkills.length;
   const isNewUser = isAuthed && completedSkillsCount === 0;
   const displayLevel = getLevelFromSkills(completedSkillsCount);
   const displayQuestsCount = isNewUser ? 0 : 27;
@@ -703,12 +716,12 @@ export default function ProfilePage() {
                       userData={{
                         fullName: profile.fullName || displayName || "New Builder",
                         level: displayLevel,
-                        skillsCount: profile.skills.length,
+                        skillsCount: completedSkillsCount,
                         questsCount: displayQuestsCount,
                         achievementsCount: earnedAchievementsCount,
                         badgesCount: earnedCampusCount,
                         avatarUrl: avatarUrl || undefined,
-                        mainSkill: profile.skills[0]?.skillName,
+                        mainSkill: effectiveSkills[0]?.skillName,
                       }} 
                     />
                   </div>
@@ -730,7 +743,7 @@ export default function ProfilePage() {
                   fullName={profile.fullName}
                   major={profile.major}
                   activeStatus={activeStatus}
-                  skills={profile.skills}
+                  skills={effectiveSkills}
                   bio={profile.bio}
                   avatarUrl={avatarUrl}
                   className="h-full flex flex-col justify-between"
@@ -834,12 +847,12 @@ export default function ProfilePage() {
         userData={{
           fullName: profile.fullName || displayName || "New Builder",
           level: displayLevel,
-          skillsCount: profile.skills.length,
+          skillsCount: completedSkillsCount,
           questsCount: displayQuestsCount,
-          achievementsCount: displayAchievementsCount,
-          badgesCount: displayBadgesCount,
+          achievementsCount: earnedAchievementsCount,
+          badgesCount: earnedCampusCount,
           avatarUrl: avatarUrl || undefined,
-          mainSkill: profile.skills[0]?.skillName,
+          mainSkill: effectiveSkills[0]?.skillName,
         }}
       />
     </div>
